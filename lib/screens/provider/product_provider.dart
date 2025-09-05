@@ -11,14 +11,18 @@ class ProductProvider with ChangeNotifier {
   final ProductService _productService = ProductService();
   List<ProductModel> _products = [];
   List<ProductModel> _filteredProducts = [];
+  ProductModel? _selectedProduct; 
   bool _isLoading = false;
+  bool _isLoadingDetails = false; 
   String _error = '';
   StreamSubscription<List<ProductModel>>? _productsSubscription;
 
   // Getters
   List<ProductModel> get products => _products;
   List<ProductModel> get filteredProducts => _filteredProducts;
+  ProductModel? get selectedProduct => _selectedProduct;
   bool get isLoading => _isLoading;
+  bool get isLoadingDetails => _isLoadingDetails;
   String get error => _error;
 
   ProductProvider() {
@@ -45,6 +49,64 @@ class ProductProvider with ChangeNotifier {
         notifyListeners();
       },
     );
+  }
+
+
+
+  // Get product details by ID
+  Future<ProductModel?> getProductDetails(String productId) async {
+    try {
+      _isLoadingDetails = true;
+      _error = '';
+      notifyListeners();
+
+      // First check if product exists in current products list
+      final existingProduct = _products.firstWhere(
+        (product) => product.productId == productId,
+        orElse: () => ProductModel.empty(),
+      );
+
+      if (existingProduct.productId.isNotEmpty) {
+        _selectedProduct = existingProduct;
+        _isLoadingDetails = false;
+        notifyListeners();
+        return existingProduct;
+      }
+
+
+
+      // If not found locally, fetch from service
+      final product = await _productService.getProductById(productId);
+      _selectedProduct = product;
+      _isLoadingDetails = false;
+      notifyListeners();
+      
+      return product;
+    } catch (e) {
+      _error = e.toString();
+      _isLoadingDetails = false;
+      _selectedProduct = null;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // Set selected product (for when passing product object directly)
+  void setSelectedProduct(ProductModel product) {
+    _selectedProduct = product;
+    notifyListeners();
+  }
+
+  // Clear selected product
+  void clearSelectedProduct() {
+    _selectedProduct = null;
+    notifyListeners();
+  }
+
+  // Get updated product data (useful for real-time updates)
+  Future<void> refreshProductDetails(String productId) async {
+    if (productId.isEmpty) return;
+    await getProductDetails(productId);
   }
 
   @override
@@ -110,6 +172,12 @@ class ProductProvider with ChangeNotifier {
         newImageFile: newImageFile,
         newWebImage: newWebImage,
       );
+
+      // Update selected product if it's the same one being updated
+      if (_selectedProduct?.productId == product.productId) {
+        _selectedProduct = product;
+      }
+
       _setLoading(false);
     } catch (e) {
       _handleError(e);
@@ -122,6 +190,12 @@ class ProductProvider with ChangeNotifier {
     try {
       _setLoading(true);
       await _productService.deleteProduct(productId);
+
+      // Clear selected product if it's the deleted one
+      if (_selectedProduct?.productId == productId) {
+        _selectedProduct = null;
+      }
+
       _setLoading(false);
     } catch (e) {
       _handleError(e);

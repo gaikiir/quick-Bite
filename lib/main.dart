@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -10,11 +11,13 @@ import 'package:quick_bite/screens/auth/forgot_password.dart';
 import 'package:quick_bite/screens/auth/login.dart';
 import 'package:quick_bite/screens/auth/register.dart';
 import 'package:quick_bite/screens/constants/theme_data.dart';
+import 'package:quick_bite/screens/provider/cart_provider.dart';
 import 'package:quick_bite/screens/provider/product_provider.dart';
 import 'package:quick_bite/screens/provider/theme_provider.dart';
 import 'package:quick_bite/screens/user/cart_screen.dart';
+import 'package:quick_bite/screens/user/product_details_screen.dart';
+import 'package:quick_bite/screens/user/products_screen.dart';
 import 'package:quick_bite/screens/user/user_root.dart';
-import 'package:quick_bite/screens/user/userdarshboar.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +36,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => ProductProvider()..initProductsStream(),
         ),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, theme, child) {
@@ -43,7 +47,9 @@ class MyApp extends StatelessWidget {
               isDarkTheme: theme.isDarkTheme,
               context: context,
             ),
-            home: const LoginScreen(),
+            initialRoute: FirebaseAuth.instance.currentUser == null
+                ? LoginScreen.routeName
+                : Register.routeName,
             routes: {
               LoginScreen.routeName: (context) => const LoginScreen(),
               Register.routeName: (context) => const Register(),
@@ -55,7 +61,17 @@ class MyApp extends StatelessWidget {
                   const ProductListScreen(),
               OrdersList.routeName: (context) => const OrdersList(),
               CartScreen.routeName: (context) => const CartScreen(),
-              Userdarshboar.routeName: (context) => const Userdarshboar(),
+              ProductsScreen.routeName: (context) => const ProductsScreen(),
+            },
+            onGenerateRoute: (settings) {
+              // Handle product details route with arguments
+              if (settings.name == ProductDetailsScreen.routeName) {
+                return MaterialPageRoute(
+                  builder: (context) => const ProductDetailsScreen(),
+                  settings: settings,
+                );
+              }
+              return null;
             },
           );
         },

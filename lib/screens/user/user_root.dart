@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:provider/provider.dart';
+import 'package:quick_bite/screens/provider/cart_provider.dart';
 import 'package:quick_bite/screens/provider/product_provider.dart';
 import 'package:quick_bite/screens/user/cart_screen.dart';
-import 'package:quick_bite/screens/user/category_screen.dart'; // Create this file
-import 'package:quick_bite/screens/user/home_screen.dart'; // Create this file
+import 'package:quick_bite/screens/user/category_screen.dart';
+import 'package:quick_bite/screens/user/home_screen.dart';
+import 'package:quick_bite/screens/user/products_screen.dart';
 
 class UserRoot extends StatefulWidget {
   /// Define route for the page
@@ -27,10 +29,16 @@ class _UserRootState extends State<UserRoot> {
   @override
   void initState() {
     super.initState();
-    _screens = const [
-      HomeScreen(),
-      CategoryScreen(),
-      CartScreen(),
+    _screens = [
+      const HomeScreen(),
+      const CategoryScreen(),
+      const ProductsScreen(),
+      const CartScreen(),
+      Container(
+        child: const Center(
+          child: Text('Profile Screen - Coming Soon'),
+        ),
+      ),
     ];
     _pageController = PageController(initialPage: _currentIndex);
   }
@@ -60,13 +68,13 @@ class _UserRootState extends State<UserRoot> {
         controller: _pageController,
         children: _screens,
       ),
-      bottomNavigationBar: Consumer<ProductProvider>(
-        builder: (context, provider, child) {
+      bottomNavigationBar: Consumer2<ProductProvider, CartProvider>(
+        builder: (context, productProvider, cartProvider, child) {
           return NavigationBar(
             selectedIndex: _currentIndex,
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             onDestinationSelected: _onDestinationSelected,
-            destinations: _buildNavBarItems(provider.products.length),
+            destinations: _buildNavBarItems(cartProvider.cartCount),
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
             animationDuration: const Duration(milliseconds: 200),
           );

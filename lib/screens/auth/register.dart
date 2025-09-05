@@ -65,8 +65,7 @@ class _RegisterState extends State<Register> {
     final ImagePicker imagePicker = ImagePicker();
     await ImageFunction.imagePickerDialog(
       context: context,
-      onCameraFn: () async {
-        // Changed from onCamerafn to onCameraFn
+      cameraFun: () async {
         _imagePicker = await imagePicker.pickImage(
           source: ImageSource.camera,
           imageQuality: 75,
@@ -74,8 +73,7 @@ class _RegisterState extends State<Register> {
         );
         setState(() {});
       },
-      onGalleryFn: () async {
-        // Changed from galaryFn to onGalleryFn
+      galleryFun: () async {
         _imagePicker = await imagePicker.pickImage(
           source: ImageSource.gallery,
           imageQuality: 75,
@@ -83,12 +81,11 @@ class _RegisterState extends State<Register> {
         );
         setState(() {});
       },
-      onDeleteFn: () async {
-        // Changed from deleteFn to onDeleteFn
-        setState(() {
-          _imagePicker = null;
-        });
-      },
+      // deleteFun: () async {
+      //   setState(() {
+      //     _imagePicker = null;
+      //   });
+      // },
     );
   }
 
@@ -187,7 +184,6 @@ class _RegisterState extends State<Register> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final size = MediaQuery.of(context).size;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),

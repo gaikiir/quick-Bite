@@ -21,12 +21,6 @@ class Styles {
         onSecondary: Colors.white,
         error: AppColors.errorColor,
         onError: Colors.white,
-        background: isDarkTheme
-            ? AppColors.darkBackgroundColor
-            : AppColors.lightBackgroundColor,
-        onBackground: isDarkTheme
-            ? AppColors.darkTextPrimary
-            : AppColors.lightTextPrimary,
         surface: isDarkTheme
             ? AppColors.darkSurfaceColor
             : AppColors.lightSurfaceColor,
@@ -183,10 +177,10 @@ class Styles {
       ),
 
       // Dialog Theme
-      dialogBackgroundColor: isDarkTheme
-          ? AppColors.darkCardColor
-          : AppColors.lightCardColor,
       dialogTheme: DialogThemeData(
+        backgroundColor: isDarkTheme
+            ? AppColors.darkCardColor
+            : AppColors.lightCardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );

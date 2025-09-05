@@ -65,7 +65,7 @@ class OrdersList extends StatelessWidget {
       title: Text(title),
       onTap: () {
         // Implement filter functionality
-       // Navigator.pop(context); // Uncommented this line
+        // Navigator.pop(context); // Uncommented this line
       },
     );
   }
