@@ -10,7 +10,6 @@ class ForgotPassword extends StatefulWidget {
 
 class _ForgotPasswordState extends State<ForgotPassword> {
   late final TextEditingController _emailController;
-  late final _formkey = GlobalKey<FormFieldState>();
 
   @override
   void initState() {
@@ -27,11 +26,6 @@ class _ForgotPasswordState extends State<ForgotPassword> {
     }
     super.dispose();
   }
-  Future<void> _forgotPasswordFn()async{
-      
-  }
-
-
 
   @override
   Widget build(BuildContext context) {

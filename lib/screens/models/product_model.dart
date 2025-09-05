@@ -45,6 +45,16 @@ class ProductModel {
     'createdAt': createdAt.toIso8601String(),
   };
 
+  factory ProductModel.empty() => ProductModel(
+    productId: '',
+    productName: '',
+    productDescription: '',
+    productPrice: 0.0,
+    productImage: '',
+    productCategory: '',
+    productQuantity: 0,
+  );
+
   ProductModel copyWith({
     String? productId,
     String? productName,

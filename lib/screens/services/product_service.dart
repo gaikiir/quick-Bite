@@ -115,6 +115,19 @@ class ProductService {
         });
   }
 
+  // Get product by ID
+  Future<ProductModel?> getProductById(String productId) async {
+    try {
+      final doc = await _firestore.collection('products').doc(productId).get();
+      if (!doc.exists) {
+        return null;
+      }
+      return ProductModel.fromJson(doc.data()!);
+    } catch (e) {
+      throw Exception('Failed to get product: $e');
+    }
+  }
+
   // Get products by category
   Stream<List<ProductModel>> getProductsByCategory(String category) {
     return _firestore

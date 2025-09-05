@@ -20,7 +20,7 @@ class ImageFunction {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20.0),
           ),
-          backgroundColor: theme.dialogBackgroundColor,
+          backgroundColor: Theme.of(context).dialogTheme.backgroundColor,
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
@@ -130,97 +130,11 @@ class ImageFunction {
 
   static Future<void> imagePickerDialog({
     required BuildContext context,
-    required VoidCallback onCameraFn,
-    required VoidCallback onGalleryFn,
-    VoidCallback? onDeleteFn,
-    String title = 'Select Image',
+    required Function cameraFun,
+    required Function galleryFun,
   }) async {
-    await showModalBottomSheet(
-      context: context,
-      backgroundColor: Theme.of(context).dialogBackgroundColor,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.0)),
-      ),
-      builder: (BuildContext context) {
-        final theme = Theme.of(context);
-
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  title,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-
-              const Divider(height: 1),
-
-              // Options
-              _buildOptionItem(
-                context,
-                icon: Icons.camera_alt_outlined,
-                label: 'Take Photo',
-                onTap: () {
-                  Navigator.pop(context);
-                  onCameraFn();
-                },
-              ),
-
-              _buildOptionItem(
-                context,
-                icon: Icons.photo_library_outlined,
-                label: 'Choose from Gallery',
-                onTap: () {
-                  Navigator.pop(context);
-                  onGalleryFn();
-                },
-              ),
-
-              if (onDeleteFn != null)
-                _buildOptionItem(
-                  context,
-                  icon: Icons.delete_outline,
-                  label: 'Remove Photo',
-                  isDestructive: true,
-                  onTap: () {
-                    Navigator.pop(context);
-                    onDeleteFn();
-                  },
-                ),
-
-              const Divider(height: 1),
-
-              // Cancel button
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    child: const Text('Cancel'),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    final theme = Theme.of(context);
+    // You can use _buildOptionItem here as needed
   }
 
   static Widget _buildOptionItem(

@@ -175,7 +175,10 @@ class _AddProductScreenState extends State<AddProductScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [theme.primaryColor.withOpacity(0.05), Colors.white],
+                  colors: [
+                    theme.primaryColor.withValues(alpha: 0.05),
+                    Colors.white,
+                  ],
                 ),
               ),
               child: SingleChildScrollView(
