@@ -6,6 +6,8 @@ class ProductModel {
   final String productImage;
   final String productCategory;
   final int productQuantity;
+  final DateTime createdAt;
+
   ProductModel({
     required this.productId,
     required this.productName,
@@ -14,7 +16,8 @@ class ProductModel {
     required this.productImage,
     required this.productCategory,
     required this.productQuantity,
-  });
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
     return ProductModel(
@@ -25,17 +28,41 @@ class ProductModel {
       productImage: json['productImage'] ?? '',
       productCategory: json['productCategory'] ?? '',
       productQuantity: json['productQuantity'] ?? 0,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'])
+          : null,
     );
   }
-  Map<String, dynamic> toJson() {
-    return {
-      'productId': productId,
-      'productName': productName,
-      'productDescription': productDescription,
-      'productPrice': productPrice,
-      'productImage': productImage,
-      'productCategory': productCategory,
-      'productQuantity': productQuantity,
-    };
+
+  Map<String, dynamic> toJson() => {
+    'productId': productId,
+    'productName': productName,
+    'productDescription': productDescription,
+    'productPrice': productPrice,
+    'productImage': productImage,
+    'productCategory': productCategory,
+    'productQuantity': productQuantity,
+    'createdAt': createdAt.toIso8601String(),
+  };
+
+  ProductModel copyWith({
+    String? productId,
+    String? productName,
+    String? productDescription,
+    double? productPrice,
+    String? productImage,
+    String? productCategory,
+    int? productQuantity,
+  }) {
+    return ProductModel(
+      productId: productId ?? this.productId,
+      productName: productName ?? this.productName,
+      productDescription: productDescription ?? this.productDescription,
+      productPrice: productPrice ?? this.productPrice,
+      productImage: productImage ?? this.productImage,
+      productCategory: productCategory ?? this.productCategory,
+      productQuantity: productQuantity ?? this.productQuantity,
+      createdAt: createdAt,
+    );
   }
 }

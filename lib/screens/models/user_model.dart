@@ -4,6 +4,8 @@ class UserModel {
   final String email;
   final String profileImage;
   final String role;
+  final String status;
+  final int orderCount;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -13,6 +15,8 @@ class UserModel {
     required this.email,
     required this.profileImage,
     this.role = 'user',
+    this.status = 'Active',
+    this.orderCount = 0,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -24,6 +28,8 @@ class UserModel {
       email: json['email'],
       profileImage: json['profileImage'],
       role: json['role'] ?? 'user',
+      status: json['status'] ?? 'Active',
+      orderCount: json['orderCount'] ?? 0,
       createdAt: DateTime.parse(json['createdAt']),
       updatedAt: DateTime.parse(json['updatedAt']),
     );
@@ -36,6 +42,8 @@ class UserModel {
       'email': email,
       'profileImage': profileImage,
       'role': role,
+      'status': status,
+      'orderCount': orderCount,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };

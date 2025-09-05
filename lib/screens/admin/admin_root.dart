@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:quick_bite/screens/admin/admindashboard.dart';
+import 'package:quick_bite/screens/admin/home.dart';
 import 'package:quick_bite/screens/admin/orders.dart';
+import 'package:quick_bite/screens/admin/product_list_screen.dart';
 import 'package:quick_bite/screens/admin/profile.dart';
-import 'package:quick_bite/screens/admin/prouducts.dart';
-import 'package:quick_bite/screens/admin/users.dart';
+import 'package:quick_bite/screens/admin/users_screen.dart';
 
 
 class AdminRootScreen extends StatefulWidget {
@@ -24,7 +24,7 @@ class _AdminRootScreenState extends State<AdminRootScreen> {
     super.initState();
     screens = const [
       AdminHomeScreen(),
-      ProductsList(),
+      ProductListScreen(),
       OrdersList(),
       UsersScreen(),
       ProfileScreen(),
