@@ -14,14 +14,21 @@ import 'package:quick_bite/screens/constants/theme_data.dart';
 import 'package:quick_bite/screens/provider/cart_provider.dart';
 import 'package:quick_bite/screens/provider/product_provider.dart';
 import 'package:quick_bite/screens/provider/theme_provider.dart';
+import 'package:quick_bite/screens/provider/wishlist_provider.dart';
 import 'package:quick_bite/screens/user/cart_screen.dart';
 import 'package:quick_bite/screens/user/product_details_screen.dart';
 import 'package:quick_bite/screens/user/products_screen.dart';
 import 'package:quick_bite/screens/user/user_root.dart';
+import 'package:quick_bite/screens/user/wishlist_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Check if user is logged in
+  final user = FirebaseAuth.instance.currentUser;
+  debugPrint('User logged in: ${user?.uid ?? 'No user'}');
+
   runApp(const MyApp());
 }
 
@@ -37,6 +44,7 @@ class MyApp extends StatelessWidget {
           create: (_) => ProductProvider()..initProductsStream(),
         ),
         ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => WishlistProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, theme, child) {
@@ -62,6 +70,7 @@ class MyApp extends StatelessWidget {
               OrdersList.routeName: (context) => const OrdersList(),
               CartScreen.routeName: (context) => const CartScreen(),
               ProductsScreen.routeName: (context) => const ProductsScreen(),
+              WishlistScreen.routeName: (context) => const WishlistScreen(),
             },
             onGenerateRoute: (settings) {
               // Handle product details route with arguments

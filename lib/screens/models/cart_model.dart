@@ -67,11 +67,11 @@ class CartModel {
       productId: json['productId']?.toString() ?? '',
       productName: json['productName']?.toString() ?? '',
       productImage: json['productImage']?.toString() ?? '',
-      userId: json['userId']?.toString() ?? '', // Added userId argument
+      userId: json['userId']?.toString() ?? '',
       productPrice: (json['productPrice'] ?? 0.0).toDouble(),
       quantity: (json['quantity'] ?? 1).toInt(),
-      addedAt: DateTime.parse(
-        json['addedAt']?.toString() ?? DateTime.now().toIso8601String(),
+      addedAt: DateTime.fromMillisecondsSinceEpoch(
+        (json['addedAt'] ?? 0).toInt(),
       ),
       selectedSize: json['selectedSize']?.toString(),
       selectedColor: json['selectedColor']?.toString(),
@@ -90,6 +90,7 @@ class CartModel {
       'addedAt': addedAt.toIso8601String(),
       'selectedSize': selectedSize,
       'selectedColor': selectedColor,
+      'userId': userId,
     };
   }
 

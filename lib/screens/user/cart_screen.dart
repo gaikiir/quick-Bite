@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../models/cart_model.dart';
 import '../provider/cart_provider.dart';
+import '../widgets/cart_item.dart';
 
 class CartScreen extends StatefulWidget {
   static const routeName = '/cart';
@@ -148,79 +148,36 @@ class _CartScreenState extends State<CartScreen> {
         color: Theme.of(context).scaffoldBackgroundColor,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
             offset: const Offset(0, -2),
           ),
         ],
       ),
       child: SafeArea(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Order Summary
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Total Items:',
-                        style: TextStyle(fontSize: 16),
-                      ),
-                      Text(
-                        '${cartProvider.totalQuantity}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+            // Total Items and Amount
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${cartProvider.cartCount} items',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
                   ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Subtotal:', style: TextStyle(fontSize: 16)),
-                      Text(
-                        '\$${cartProvider.totalAmount.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                ),
+                Text(
+                  '\$${cartProvider.totalAmount.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).primaryColor,
                   ),
-                  const Divider(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Total:',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
-                      Text(
-                        '\$${cartProvider.totalAmount.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
 
@@ -228,22 +185,16 @@ class _CartScreenState extends State<CartScreen> {
             SizedBox(
               width: double.infinity,
               height: 50,
-              child: ElevatedButton.icon(
-                onPressed: cartProvider.cartItems.isEmpty
-                    ? null
-                    : () => _proceedToCheckout(),
-                icon: const Icon(Icons.payment),
-                label: const Text(
-                  'Proceed to Checkout',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
+              child: ElevatedButton(
+                onPressed: () => _handleCheckout(cartProvider),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).primaryColor,
-                  foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  elevation: 2,
+                ),
+                child: const Text(
+                  'Proceed to Checkout',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -256,239 +207,44 @@ class _CartScreenState extends State<CartScreen> {
   void _showClearCartDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Clear Cart'),
-          content: const Text(
-            'Are you sure you want to remove all items from your cart?',
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Cart'),
+        content: const Text(
+          'Are you sure you want to remove all items from your cart?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Provider.of<CartProvider>(context, listen: false).clearCart();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Cart cleared successfully'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              },
-              child: const Text(
-                'Clear All',
-                style: TextStyle(color: Colors.red),
-              ),
-            ),
-          ],
-        );
-      },
+          TextButton(
+            onPressed: () {
+              final cartProvider = Provider.of<CartProvider>(
+                context,
+                listen: false,
+              );
+              cartProvider.clearCart();
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Cart cleared'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            child: const Text('Clear', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
     );
   }
 
-  void _proceedToCheckout() {
-    // TODO: Implement checkout logic
+  void _handleCheckout(CartProvider cartProvider) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Checkout functionality coming soon!'),
         backgroundColor: Colors.blue,
       ),
-    );
-  }
-}
-
-// Cart Item Card Widget
-class CartItemCard extends StatelessWidget {
-  final CartModel cartItem;
-  final ValueChanged<int> onQuantityChanged;
-  final VoidCallback onRemove;
-
-  const CartItemCard({
-    super.key,
-    required this.cartItem,
-    required this.onQuantityChanged,
-    required this.onRemove,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            // Product Image
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                cartItem.productImage,
-                width: 80,
-                height: 80,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 80,
-                    height: 80,
-                    color: Colors.grey.shade200,
-                    child: const Icon(
-                      Icons.image_not_supported,
-                      color: Colors.grey,
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 12),
-
-            // Product Details
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    cartItem.productName,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  if (cartItem.selectedSize != null ||
-                      cartItem.selectedColor != null)
-                    Text(
-                      [
-                        if (cartItem.selectedSize != null)
-                          'Size: ${cartItem.selectedSize}',
-                        if (cartItem.selectedColor != null)
-                          'Color: ${cartItem.selectedColor}',
-                      ].join(' • '),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '\$${cartItem.productPrice.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // Quantity Controls and Total
-                  Row(
-                    children: [
-                      // Quantity Controls
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              onPressed: cartItem.quantity > 1
-                                  ? () =>
-                                        onQuantityChanged(cartItem.quantity - 1)
-                                  : null,
-                              icon: const Icon(Icons.remove),
-                              padding: const EdgeInsets.all(4),
-                              constraints: const BoxConstraints(
-                                minWidth: 32,
-                                minHeight: 32,
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                              ),
-                              child: Text(
-                                cartItem.quantity.toString(),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            IconButton(
-                              onPressed: () =>
-                                  onQuantityChanged(cartItem.quantity + 1),
-                              icon: const Icon(Icons.add),
-                              padding: const EdgeInsets.all(4),
-                              constraints: const BoxConstraints(
-                                minWidth: 32,
-                                minHeight: 32,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Spacer(),
-
-                      // Total Price
-                      Text(
-                        '\$${cartItem.totalPrice.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
-            // Remove Button
-            IconButton(
-              onPressed: () => _showRemoveDialog(context),
-              icon: const Icon(Icons.delete_outline, color: Colors.red),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showRemoveDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Remove Item'),
-          content: Text('Remove ${cartItem.productName} from cart?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                onRemove();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${cartItem.productName} removed from cart'),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-              },
-              child: const Text('Remove', style: TextStyle(color: Colors.red)),
-            ),
-          ],
-        );
-      },
     );
   }
 }

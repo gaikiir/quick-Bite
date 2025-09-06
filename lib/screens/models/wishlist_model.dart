@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class WishlistModel {
   final String wishlistId;
   final String productId;
@@ -7,6 +9,7 @@ class WishlistModel {
   final DateTime addedAt;
   final String? category;
   final bool isAvailable;
+  final String userId;
 
   WishlistModel({
     required this.wishlistId,
@@ -17,6 +20,7 @@ class WishlistModel {
     required this.addedAt,
     this.category,
     this.isAvailable = true,
+    required this.userId,
   });
 
   // Convert WishlistModel to Map for database storage
@@ -30,52 +34,42 @@ class WishlistModel {
       'addedAt': addedAt.millisecondsSinceEpoch,
       'category': category,
       'isAvailable': isAvailable,
+      'userId': userId,
     };
   }
 
   // Create WishlistModel from Map (database retrieval)
   factory WishlistModel.fromMap(Map<String, dynamic> map) {
+    // Handle addedAt conversion safely
+    DateTime parseAddedAt(dynamic value) {
+      if (value is int) {
+        return DateTime.fromMillisecondsSinceEpoch(value);
+      } else if (value is String) {
+        return DateTime.tryParse(value) ?? DateTime.now();
+      } else {
+        return DateTime.now();
+      }
+    }
+
     return WishlistModel(
-      wishlistId: map['wishlistId'] ?? '',
-      productId: map['productId'] ?? '',
-      productName: map['productName'] ?? '',
-      productImage: map['productImage'] ?? '',
+      wishlistId: map['wishlistId']?.toString() ?? '',
+      productId: map['productId']?.toString() ?? '',
+      productName: map['productName']?.toString() ?? '',
+      productImage: map['productImage']?.toString() ?? '',
       productPrice: (map['productPrice'] ?? 0.0).toDouble(),
-      addedAt: DateTime.fromMillisecondsSinceEpoch(map['addedAt'] ?? 0),
-      category: map['category'],
+      addedAt: parseAddedAt(map['addedAt']),
+      category: map['category']?.toString(),
       isAvailable: map['isAvailable'] ?? true,
+      userId: map['userId']?.toString() ?? '',
     );
   }
 
   // Create WishlistModel from JSON
-  factory WishlistModel.fromJson(Map<String, dynamic> json) {
-    return WishlistModel(
-      wishlistId: json['wishlistId'] ?? '',
-      productId: json['productId'] ?? '',
-      productName: json['productName'] ?? '',
-      productImage: json['productImage'] ?? '',
-      productPrice: (json['productPrice'] ?? 0.0).toDouble(),
-      addedAt: DateTime.parse(
-        json['addedAt'] ?? DateTime.now().toIso8601String(),
-      ),
-      category: json['category'],
-      isAvailable: json['isAvailable'] ?? true,
-    );
-  }
+  factory WishlistModel.fromJson(String source) =>
+      WishlistModel.fromMap(json.decode(source));
 
   // Convert WishlistModel to JSON
-  Map<String, dynamic> toJson() {
-    return {
-      'wishlistId': wishlistId,
-      'productId': productId,
-      'productName': productName,
-      'productImage': productImage,
-      'productPrice': productPrice,
-      'addedAt': addedAt.toIso8601String(),
-      'category': category,
-      'isAvailable': isAvailable,
-    };
-  }
+  String toJson() => json.encode(toMap());
 
   // Create a copy of WishlistModel with updated fields
   WishlistModel copyWith({
@@ -87,6 +81,7 @@ class WishlistModel {
     DateTime? addedAt,
     String? category,
     bool? isAvailable,
+    String? userId,
   }) {
     return WishlistModel(
       wishlistId: wishlistId ?? this.wishlistId,
@@ -97,6 +92,7 @@ class WishlistModel {
       addedAt: addedAt ?? this.addedAt,
       category: category ?? this.category,
       isAvailable: isAvailable ?? this.isAvailable,
+      userId: userId ?? this.userId,
     );
   }
 
