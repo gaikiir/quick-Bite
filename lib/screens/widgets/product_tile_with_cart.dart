@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:quick_bite/screens/models/product_model.dart';
 import 'package:quick_bite/screens/provider/cart_provider.dart';
+import 'package:quick_bite/screens/widgets/wishlist_widgets.dart';
 
 class ProductTileWithCart extends StatefulWidget {
+  static const routeName = '/product-tile';
   final ProductModel product;
 
   const ProductTileWithCart({super.key, required this.product});
@@ -29,33 +31,52 @@ class _ProductTileWithCartState extends State<ProductTileWithCart> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product Image with Hero animation
+            // Product Image with Hero animation and Wishlist
             Expanded(
               flex: 3,
-              child: Hero(
-                tag: 'product-${widget.product.productId}',
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(12),
+              child: Stack(
+                children: [
+                  Hero(
+                    tag: 'product-${widget.product.productId}',
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(12),
+                      ),
+                      child: Image.network(
+                        widget.product.productImage,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey.shade200,
+                            child: const Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                size: 40,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
                   ),
-                  child: Image.network(
-                    widget.product.productImage,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: Colors.grey.shade200,
-                        child: const Center(
-                          child: Icon(
-                            Icons.image_not_supported,
-                            size: 40,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      );
-                    },
+                  // Wishlist Button
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.8),
+                        shape: BoxShape.circle,
+                      ),
+                      child: WishlistButton(
+                        productId: widget.product.productId,
+                        product: widget.product,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
 
@@ -112,6 +133,9 @@ class _ProductTileWithCartState extends State<ProductTileWithCart> {
 
                             return GestureDetector(
                               onTap: () {
+                                debugPrint(
+                                  'Cart button tapped for product: ${widget.product.productId}',
+                                );
                                 if (!isInCart) {
                                   cartProvider.addToCart(
                                     product: widget.product,

@@ -14,6 +14,10 @@ class CartProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   StreamSubscription? _cartSubscription;
 
+  CartProvider() {
+    debugPrint('CartProvider initialized');
+  }
+
   List<CartModel> get cartItems => _cartItems;
   bool get isLoading => _isLoading;
   int get cartCount => _cartItems.length;
@@ -46,10 +50,14 @@ class CartProvider with ChangeNotifier {
   }) async {
     try {
       _isLoading = true;
-      // Don't notify here to prevent double updates
+      notifyListeners();
 
       final user = _auth.currentUser;
       if (user == null) throw Exception('User not logged in');
+
+      debugPrint(
+        'Adding to cart: ${product.productName} for user: ${user.uid}',
+      );
 
       final existingItemIndex = _cartItems.indexWhere(
         (item) =>
@@ -59,9 +67,11 @@ class CartProvider with ChangeNotifier {
       );
 
       if (existingItemIndex != -1) {
-        // Instead of adding quantities, just set to the new quantity
-        await updateQuantity(_cartItems[existingItemIndex].cartId, quantity);
-        return; // Exit early since updateQuantity will handle notifications
+        // Update quantity of existing item
+        final newQuantity = _cartItems[existingItemIndex].quantity + quantity;
+        debugPrint('Updating existing item quantity to: $newQuantity');
+        await updateQuantity(_cartItems[existingItemIndex].cartId, newQuantity);
+        return;
       } else {
         final cartId = const Uuid().v4();
         final cartItem = CartModel(
@@ -74,16 +84,20 @@ class CartProvider with ChangeNotifier {
           addedAt: DateTime.now(),
           selectedSize: selectedSize,
           selectedColor: selectedColor,
-          userId: user.uid, // Set the userId from the current user
+          userId: user.uid,
         );
 
+        debugPrint('Saving cart item to Firestore: $cartId');
+
         await _firestore.collection('carts').doc(cartId).set(cartItem.toMap());
+
+        debugPrint('Cart item saved successfully');
 
         _cartItems.add(cartItem);
         notifyListeners();
       }
     } catch (e) {
-      print('Error adding to cart: $e');
+      debugPrint('Error adding to cart: $e');
       rethrow;
     } finally {
       _isLoading = false;
@@ -119,7 +133,6 @@ class CartProvider with ChangeNotifier {
 
     try {
       _isLoading = true;
-      // Only notify once at the start
       notifyListeners();
 
       final user = _auth.currentUser;
@@ -138,12 +151,13 @@ class CartProvider with ChangeNotifier {
       _cartItems[itemIndex] = _cartItems[itemIndex].copyWith(
         quantity: newQuantity,
       );
+
+      notifyListeners();
     } catch (e) {
       print('Error updating quantity: $e');
       rethrow;
     } finally {
       _isLoading = false;
-      // Only notify once at the end
       notifyListeners();
     }
   }
@@ -185,15 +199,20 @@ class CartProvider with ChangeNotifier {
 
       final user = _auth.currentUser;
       if (user == null) {
+        debugPrint('User not logged in, clearing cart');
         _cartItems.clear();
         return;
       }
+
+      debugPrint('Loading cart items for user: ${user.uid}');
 
       // Use simple query without ordering
       final cartSnapshot = await _firestore
           .collection('carts')
           .where('userId', isEqualTo: user.uid)
           .get();
+
+      debugPrint('Found ${cartSnapshot.docs.length} cart items');
 
       _cartItems = cartSnapshot.docs
           .map((doc) => CartModel.fromMap(doc.data()))
@@ -202,9 +221,11 @@ class CartProvider with ChangeNotifier {
       // Sort locally by addedAt
       _cartItems.sort((a, b) => b.addedAt.compareTo(a.addedAt));
 
+      debugPrint('Cart loaded: ${_cartItems.length} items');
+
       notifyListeners();
     } catch (e) {
-      print('Error loading cart items: $e');
+      debugPrint('Error loading cart items: $e');
       _cartItems = [];
     } finally {
       _isLoading = false;
