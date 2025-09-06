@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users can read and write their own data
+    match /users/{userId}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow reading and writing wishlists for authenticated users
+    match /wishlists/{wishlistId} {
+      allow read, write: if request.auth != null &&
+        (request.auth.uid == resource.data.userId ||
+         request.auth.uid == request.resource.data.userId);
+    }
+
+    // Allow reading products for all authenticated users
+    match /products/{productId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null;
+    }
+
+    // Allow reading and writing carts for authenticated users
+    match /carts/{cartId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
