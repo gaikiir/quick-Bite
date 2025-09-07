@@ -22,7 +22,7 @@ class _RegisterState extends State<Register> {
   late final TextEditingController _userNameController,
       _emailController,
       _passwordController,
-      _repeatePasswordController;
+      _repeatPasswordController;
   late final FocusNode _userNameFocusNode,
       _emailFocusNode,
       _passwordFocusNode,
@@ -36,7 +36,7 @@ class _RegisterState extends State<Register> {
       _userNameController = TextEditingController();
       _emailController = TextEditingController();
       _passwordController = TextEditingController();
-      _repeatePasswordController = TextEditingController();
+      _repeatPasswordController = TextEditingController();
       _userNameFocusNode = FocusNode();
       _emailFocusNode = FocusNode();
       _passwordFocusNode = FocusNode();
@@ -51,7 +51,7 @@ class _RegisterState extends State<Register> {
       _emailController.dispose();
       _userNameController.dispose();
       _passwordController.dispose();
-      _repeatePasswordController.dispose();
+      _repeatPasswordController.dispose();
       _emailFocusNode.dispose();
       _repeatPasswordFocusNode.dispose();
       _passwordFocusNode.dispose();
@@ -430,7 +430,7 @@ class _RegisterState extends State<Register> {
 
                       // Confirm Password
                       TextFormField(
-                        controller: _repeatePasswordController,
+                        controller: _repeatPasswordController,
                         focusNode: _repeatPasswordFocusNode,
                         obscureText: _obscureText,
                         textInputAction: TextInputAction.done,

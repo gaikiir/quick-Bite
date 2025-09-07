@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:quick_bite/screens/admin/admin_root.dart';
+import 'package:quick_bite/screens/auth/forgot_password.dart';
 import 'package:quick_bite/screens/auth/register.dart';
 import 'package:quick_bite/screens/constants/validate.dart';
 import 'package:quick_bite/screens/models/user_model.dart';
@@ -267,7 +268,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
-                              // Add forgot password functionality
+                              Navigator.pushNamed(context, ForgotPassword.routeName);
                             },
                             child: Text(
                               "Forgot Password?",

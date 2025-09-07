@@ -11,9 +11,9 @@ class ProductProvider with ChangeNotifier {
   final ProductService _productService = ProductService();
   List<ProductModel> _products = [];
   List<ProductModel> _filteredProducts = [];
-  ProductModel? _selectedProduct; 
+  ProductModel? _selectedProduct;
   bool _isLoading = false;
-  bool _isLoadingDetails = false; 
+  bool _isLoadingDetails = false;
   String _error = '';
   StreamSubscription<List<ProductModel>>? _productsSubscription;
 
@@ -26,13 +26,17 @@ class ProductProvider with ChangeNotifier {
   String get error => _error;
 
   ProductProvider() {
-    initProductsStream();
+    // Removed auto-initialization to prevent double initialization
   }
 
   // Initialize products stream
   void initProductsStream() {
     _isLoading = true;
-    notifyListeners();
+
+    // Use post frame callback to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
 
     _productsSubscription?.cancel();
     _productsSubscription = _productService.getAllProducts().listen(
@@ -41,17 +45,23 @@ class ProductProvider with ChangeNotifier {
         _filteredProducts = products;
         _error = '';
         _isLoading = false;
-        notifyListeners();
+
+        // Use post frame callback to avoid setState during build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
       },
       onError: (error) {
         _error = error.toString();
         _isLoading = false;
-        notifyListeners();
+
+        // Use post frame callback to avoid setState during build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
       },
     );
   }
-
-
 
   // Get product details by ID
   Future<ProductModel?> getProductDetails(String productId) async {
@@ -73,14 +83,12 @@ class ProductProvider with ChangeNotifier {
         return existingProduct;
       }
 
-
-
       // If not found locally, fetch from service
       final product = await _productService.getProductById(productId);
       _selectedProduct = product;
       _isLoadingDetails = false;
       notifyListeners();
-      
+
       return product;
     } catch (e) {
       _error = e.toString();

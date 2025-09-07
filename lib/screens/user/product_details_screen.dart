@@ -13,48 +13,24 @@ class ProductDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final arguments = ModalRoute.of(context)!.settings.arguments;
+
+    if (arguments is! ProductModel) {
+      return _buildErrorScaffold(context, 'Invalid product data provided');
+    }
+
+    final product = arguments;
+
+    // Set the selected product immediately
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final arguments = ModalRoute.of(context)!.settings.arguments;
       final productProvider = Provider.of<ProductProvider>(
         context,
         listen: false,
       );
-
-      if (arguments is ProductModel) {
-        productProvider.setSelectedProduct(arguments);
-      } else if (arguments is String) {
-        productProvider.getProductDetails(arguments);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid product data provided'),
-            backgroundColor: Colors.red,
-          ),
-        );
-        Navigator.pop(context);
-      }
+      productProvider.setSelectedProduct(product);
     });
 
-    return Consumer<ProductProvider>(
-      builder: (context, productProvider, child) {
-        if (productProvider.isLoadingDetails) {
-          return _buildLoadingScaffold();
-        }
-
-        if (productProvider.selectedProduct == null) {
-          return _buildErrorScaffold(context, productProvider.error);
-        }
-
-        return ProductDetailsContent(product: productProvider.selectedProduct!);
-      },
-    );
-  }
-
-  Scaffold _buildLoadingScaffold() {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Product Details')),
-      body: const Center(child: CircularProgressIndicator()),
-    );
+    return ProductDetailsContent(product: product);
   }
 
   Scaffold _buildErrorScaffold(BuildContext context, String error) {
