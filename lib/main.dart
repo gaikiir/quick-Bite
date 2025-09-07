@@ -1,21 +1,33 @@
+// Core Flutter and Firebase imports
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+// Firebase configuration
 import 'package:quick_bite/firebase_options.dart';
+// Admin screens
 import 'package:quick_bite/screens/admin/admin_root.dart';
 import 'package:quick_bite/screens/admin/orders.dart';
 import 'package:quick_bite/screens/admin/product_list_screen.dart';
 import 'package:quick_bite/screens/admin/users_screen.dart';
+// Authentication screens
 import 'package:quick_bite/screens/auth/forgot_password.dart';
 import 'package:quick_bite/screens/auth/login.dart';
 import 'package:quick_bite/screens/auth/register.dart';
+// Constants and themes
 import 'package:quick_bite/screens/constants/theme_data.dart';
+// Models
+import 'package:quick_bite/screens/models/categoryModel.dart';
+// Providers
 import 'package:quick_bite/screens/provider/cart_provider.dart';
+import 'package:quick_bite/screens/provider/category_provider.dart';
 import 'package:quick_bite/screens/provider/product_provider.dart';
 import 'package:quick_bite/screens/provider/theme_provider.dart';
 import 'package:quick_bite/screens/provider/wishlist_provider.dart';
+// User screens
 import 'package:quick_bite/screens/user/cart_screen.dart';
+import 'package:quick_bite/screens/user/category_products_screen.dart';
+import 'package:quick_bite/screens/user/category_screen.dart';
 import 'package:quick_bite/screens/user/product_details_screen.dart';
 import 'package:quick_bite/screens/user/products_screen.dart';
 import 'package:quick_bite/screens/user/user_root.dart';
@@ -35,6 +47,29 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  // Routes configuration method
+  Map<String, WidgetBuilder> _buildRoutes() {
+    return {
+      // Authentication routes
+      LoginScreen.routeName: (context) => const LoginScreen(),
+      Register.routeName: (context) => const Register(),
+      ForgotPassword.routeName: (context) => const ForgotPassword(),
+      
+      // Admin routes
+      AdminRootScreen.routeName: (context) => const AdminRootScreen(),
+      UsersScreen.routeName: (context) => const UsersScreen(),
+      ProductListScreen.routeName: (context) => const ProductListScreen(),
+      OrdersList.routeName: (context) => const OrdersList(),
+      
+      // User routes
+      UserRoot.routeName: (context) => const UserRoot(),
+      CartScreen.routeName: (context) => const CartScreen(),
+      ProductsScreen.routeName: (context) => const ProductsScreen(),
+      WishlistScreen.routeName: (context) => const WishlistScreen(),
+      '/category': (context) => const CategoryScreen(),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -45,6 +80,7 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => WishlistProvider()),
+        ChangeNotifierProvider(create: (_) => CategoryProvider()),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, theme, child) {
@@ -57,21 +93,9 @@ class MyApp extends StatelessWidget {
             ),
             initialRoute: FirebaseAuth.instance.currentUser == null
                 ? LoginScreen.routeName
-                : Register.routeName,
-            routes: {
-              LoginScreen.routeName: (context) => const LoginScreen(),
-              Register.routeName: (context) => const Register(),
-              ForgotPassword.routeName: (context) => const ForgotPassword(),
-              AdminRootScreen.routeName: (context) => const AdminRootScreen(),
-              UserRoot.routeName: (context) => const UserRoot(),
-              UsersScreen.routeName: (context) => const UsersScreen(),
-              ProductListScreen.routeName: (context) =>
-                  const ProductListScreen(),
-              OrdersList.routeName: (context) => const OrdersList(),
-              CartScreen.routeName: (context) => const CartScreen(),
-              ProductsScreen.routeName: (context) => const ProductsScreen(),
-              WishlistScreen.routeName: (context) => const WishlistScreen(),
-            },
+                : UserRoot.routeName,
+            // Route configuration
+            routes: _buildRoutes(),
             onGenerateRoute: (settings) {
               // Handle product details route with arguments
               if (settings.name == ProductDetailsScreen.routeName) {
@@ -80,6 +104,19 @@ class MyApp extends StatelessWidget {
                   settings: settings,
                 );
               }
+
+              // Handle category products route with arguments
+              if (settings.name == CategoryProductsScreen.routeName) {
+                final category = settings.arguments as CategoryModel?;
+                if (category != null) {
+                  return MaterialPageRoute(
+                    builder: (context) =>
+                        CategoryProductsScreen(category: category),
+                    settings: settings,
+                  );
+                }
+              }
+
               return null;
             },
           );

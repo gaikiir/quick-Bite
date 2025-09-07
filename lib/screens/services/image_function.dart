@@ -134,7 +134,57 @@ class ImageFunction {
     required Function galleryFun,
   }) async {
     final theme = Theme.of(context);
-    // You can use _buildOptionItem here as needed
+    
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.dialogBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Select Image Source',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 20),
+            _buildOptionItem(
+              context,
+              icon: Icons.camera_alt,
+              label: 'Take Photo',
+              onTap: () {
+                Navigator.pop(context);
+                cameraFun();
+              },
+            ),
+            _buildOptionItem(
+              context,
+              icon: Icons.photo_library,
+              label: 'Choose from Gallery',
+              onTap: () {
+                Navigator.pop(context);
+                galleryFun();
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
+        ),
+      ),
+    );
   }
 
   static Widget _buildOptionItem(

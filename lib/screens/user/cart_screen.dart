@@ -124,8 +124,14 @@ class _CartScreenState extends State<CartScreen> {
           const SizedBox(height: 32),
           ElevatedButton.icon(
             onPressed: () {
-              // Navigate to products or home
-              Navigator.of(context).pop();
+              // Navigate back to home screen for shopping
+              if (mounted) {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/UserRoot',
+                  (route) => false,
+                );
+              }
             },
             icon: const Icon(Icons.shopping_bag),
             label: const Text('Continue Shopping'),
@@ -205,6 +211,8 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   void _showClearCartDialog(BuildContext context) {
+    if (!mounted) return;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -214,7 +222,9 @@ class _CartScreenState extends State<CartScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
+            onPressed: () {
+              if (mounted) Navigator.of(context).pop();
+            },
             child: const Text('Cancel'),
           ),
           TextButton(
@@ -224,13 +234,15 @@ class _CartScreenState extends State<CartScreen> {
                 listen: false,
               );
               cartProvider.clearCart();
-              Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Cart cleared'),
-                  backgroundColor: Colors.green,
-                ),
-              );
+              if (mounted) {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Cart cleared'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
             },
             child: const Text('Clear', style: TextStyle(color: Colors.red)),
           ),
@@ -240,6 +252,8 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   void _handleCheckout(CartProvider cartProvider) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Checkout functionality coming soon!'),
