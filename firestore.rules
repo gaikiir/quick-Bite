@@ -1,33 +1,119 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users can read and write their own data
+
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null &&
+             exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user owns the document
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // ========================================
+    // ADMIN RULES
+    // ========================================
+
+    // Admin users collection - only admins can manage admin list
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Admins can read/write ALL user data
     match /users/{userId}/{document=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isAdmin();
     }
 
-    // Allow reading and writing wishlists for authenticated users
+    // Admins can read/write ALL wishlists
     match /wishlists/{wishlistId} {
-      allow read, write: if request.auth != null &&
-        (request.auth.uid == resource.data.userId ||
-         request.auth.uid == request.resource.data.userId);
+      allow read, write: if isAdmin();
     }
 
-    // Allow reading products for all authenticated users
+    // Admins can read/write ALL products
     match /products/{productId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read, write: if isAdmin();
     }
 
-    // Allow reading and writing carts for authenticated users
+    // Admins can read/write ALL carts
     match /carts/{cartId} {
-      allow read, write: if request.auth != null;
+      allow read, write: if isAdmin();
     }
 
-    // Allow reading and writing categories for authenticated users
+    // Admins can read/write ALL categories
     match /categories/{categoryId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
+      allow read, write: if isAdmin();
     }
+
+    // Admins can read/write ALL orders
+    match /orders/{orderId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ========================================
+    // USER RULES
+    // ========================================
+
+    // Users can read and write their own profile data
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Users can read/write their own subcollections
+    match /users/{userId}/{document=**} {
+      allow read, write: if isOwner(userId);
+    }
+
+    // Users can read/write their own wishlists
+    match /wishlists/{wishlistId} {
+      allow read, write: if isAuthenticated() &&
+        (isOwner(resource.data.userId) ||
+         (isOwner(request.resource.data.userId) && request.resource.data.userId != null));
+    }
+
+    // Users can read products (for browsing)
+    match /products/{productId} {
+      allow read: if isAuthenticated();
+      // Only admins can write products
+      allow write: if isAdmin();
+    }
+
+    // Users can read/write their own carts
+    match /carts/{cartId} {
+      allow read, write: if isAuthenticated() &&
+        (isOwner(resource.data.userId) ||
+         (isOwner(request.resource.data.userId) && request.resource.data.userId != null));
+    }
+
+    // Users can read categories (for browsing)
+    match /categories/{categoryId} {
+      allow read: if isAuthenticated();
+      // Only admins can write categories
+      allow write: if isAdmin();
+    }
+
+    // Users can read/write their own orders
+    match /orders/{orderId} {
+      allow read, write: if isAuthenticated() &&
+        (isOwner(resource.data.userId) ||
+         (isOwner(request.resource.data.userId) && request.resource.data.userId != null));
+    }
+
+    // ========================================
+    // PUBLIC/ANONYMOUS RULES (if needed)
+    // ========================================
+
+    // Add any public collections here if needed
+    // match /public/{document=**} {
+    //   allow read: if true;
+    //   allow write: if false;
+    // }
   }
 }

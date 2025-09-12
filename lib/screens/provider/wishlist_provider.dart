@@ -177,6 +177,7 @@ class WishlistProvider with ChangeNotifier {
         debugPrint('User not logged in, clearing wishlist');
         _wishlistItems.clear();
         _wishlistProductIds.clear();
+        _error = 'Please log in to view your wishlist';
         return;
       }
 
@@ -185,13 +186,15 @@ class WishlistProvider with ChangeNotifier {
       final wishlistSnapshot = await _firestore
           .collection('wishlists')
           .where('userId', isEqualTo: user.uid)
-          .orderBy('addedAt', descending: true)
           .get();
       debugPrint('Found ${wishlistSnapshot.docs.length} wishlist items');
 
       _wishlistItems = wishlistSnapshot.docs
           .map((doc) => WishlistModel.fromMap(doc.data()))
           .toList();
+
+      // Sort by addedAt descending (newest first) since we can't use orderBy in query
+      _wishlistItems.sort((a, b) => b.addedAt.compareTo(a.addedAt));
 
       // Update the product IDs set for fast lookups
       _wishlistProductIds = _wishlistItems
@@ -217,7 +220,12 @@ class WishlistProvider with ChangeNotifier {
   // Listen to wishlist changes
   void listenToWishlistChanges() {
     final user = _auth.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      debugPrint('User not logged in, cannot listen to wishlist changes');
+      _error = 'Please log in to sync your wishlist';
+      notifyListeners();
+      return;
+    }
 
     // Cancel any existing subscription
     _wishlistSubscription?.cancel();
@@ -226,13 +234,15 @@ class WishlistProvider with ChangeNotifier {
     _wishlistSubscription = _firestore
         .collection('wishlists')
         .where('userId', isEqualTo: user.uid)
-        .orderBy('addedAt', descending: true)
         .snapshots()
         .listen(
           (snapshot) {
             _wishlistItems = snapshot.docs
                 .map((doc) => WishlistModel.fromMap(doc.data()))
                 .toList();
+
+            // Sort by addedAt descending (newest first)
+            _wishlistItems.sort((a, b) => b.addedAt.compareTo(a.addedAt));
 
             _wishlistProductIds = _wishlistItems
                 .map((item) => item.productId)
