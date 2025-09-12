@@ -57,7 +57,10 @@ class CategoryProvider with ChangeNotifier {
     _selectedCategory = categoryName;
     _categoryProducts = [];
 
-    notifyListeners();
+    // Use post frame callback to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
 
     debugPrint('🔍 Subscribing to products for category: $categoryName');
 
@@ -76,14 +79,20 @@ class CategoryProvider with ChangeNotifier {
               '✅ Live products: ${_categoryProducts.length} for $categoryName',
             );
 
-            notifyListeners();
+            // Use post frame callback to avoid setState during build
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              notifyListeners();
+            });
           },
           onError: (e) {
             _productsError = 'Failed to load products: $e';
             _isLoadingProducts = false;
             debugPrint('❌ Error subscribing products for category: $e');
 
-            notifyListeners();
+            // Use post frame callback to avoid setState during build
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              notifyListeners();
+            });
           },
         );
   }
@@ -117,13 +126,21 @@ class CategoryProvider with ChangeNotifier {
     _selectedCategory = '';
     _productsError = '';
     _categoryProductsSubscription?.cancel();
-    notifyListeners();
+
+    // Use post frame callback to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   // Set loading state
   void _setLoading(bool loading) {
     _isLoading = loading;
-    notifyListeners();
+
+    // Use post frame callback to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   // Handle errors
@@ -131,7 +148,11 @@ class CategoryProvider with ChangeNotifier {
     _error = error.toString();
     _isLoading = false;
     debugPrint('CategoryProvider Error: $_error');
-    notifyListeners();
+
+    // Use post frame callback to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   // Initialize categories stream
@@ -147,7 +168,11 @@ class CategoryProvider with ChangeNotifier {
               .toList();
           _error = '';
           debugPrint('Categories loaded: ${_categories.length}');
-          notifyListeners();
+
+          // Use post frame callback to avoid setState during build
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            notifyListeners();
+          });
         }, onError: _handleError);
   }
 
@@ -250,14 +275,22 @@ class CategoryProvider with ChangeNotifier {
   void setSelectedCategory(String categoryName) {
     _selectedCategory = categoryName;
     debugPrint('Selected category: $categoryName');
-    notifyListeners();
+
+    // Use post frame callback to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   // Clear selected category
   void clearSelectedCategory() {
     _selectedCategory = '';
     debugPrint('Category selection cleared');
-    notifyListeners();
+
+    // Use post frame callback to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   // Get category by ID
@@ -290,7 +323,11 @@ class CategoryProvider with ChangeNotifier {
   // Clear errors
   void clearError() {
     _error = '';
-    notifyListeners();
+
+    // Use post frame callback to avoid setState during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      notifyListeners();
+    });
   }
 
   // Initialize with sample data (for development only - use Firebase console for production)

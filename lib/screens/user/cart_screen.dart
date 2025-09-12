@@ -254,11 +254,18 @@ class _CartScreenState extends State<CartScreen> {
   void _handleCheckout(CartProvider cartProvider) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Checkout functionality coming soon!'),
-        backgroundColor: Colors.blue,
-      ),
-    );
+    // Check if cart is empty
+    if (cartProvider.cartItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your cart is empty'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Navigate to checkout screen
+    Navigator.pushNamed(context, '/checkout');
   }
 }

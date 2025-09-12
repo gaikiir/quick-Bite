@@ -68,7 +68,11 @@ class ProductProvider with ChangeNotifier {
     try {
       _isLoadingDetails = true;
       _error = '';
-      notifyListeners();
+
+      // Use post frame callback to avoid setState during build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
 
       // First check if product exists in current products list
       final existingProduct = _products.firstWhere(
@@ -79,7 +83,12 @@ class ProductProvider with ChangeNotifier {
       if (existingProduct.productId.isNotEmpty) {
         _selectedProduct = existingProduct;
         _isLoadingDetails = false;
-        notifyListeners();
+
+        // Use post frame callback to avoid setState during build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          notifyListeners();
+        });
+
         return existingProduct;
       }
 
@@ -87,14 +96,23 @@ class ProductProvider with ChangeNotifier {
       final product = await _productService.getProductById(productId);
       _selectedProduct = product;
       _isLoadingDetails = false;
-      notifyListeners();
+
+      // Use post frame callback to avoid setState during build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
 
       return product;
     } catch (e) {
       _error = e.toString();
       _isLoadingDetails = false;
       _selectedProduct = null;
-      notifyListeners();
+
+      // Use post frame callback to avoid setState during build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        notifyListeners();
+      });
+
       return null;
     }
   }

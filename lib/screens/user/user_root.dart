@@ -7,6 +7,7 @@ import 'package:quick_bite/screens/user/cart_screen.dart';
 import 'package:quick_bite/screens/user/category_screen.dart';
 import 'package:quick_bite/screens/user/home_screen.dart';
 import 'package:quick_bite/screens/user/products_screen.dart';
+import 'package:quick_bite/screens/user/user_profile_screen.dart';
 
 class UserRoot extends StatefulWidget {
   /// Define route for the page
@@ -34,11 +35,7 @@ class _UserRootState extends State<UserRoot> {
       const CategoryScreen(),
       const ProductsScreen(),
       const CartScreen(),
-      Container(
-        child: const Center(
-          child: Text('Profile Screen - Coming Soon'),
-        ),
-      ),
+      const UserProfileScreen(),
     ];
     _pageController = PageController(initialPage: _currentIndex);
   }

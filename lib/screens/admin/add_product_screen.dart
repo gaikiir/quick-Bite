@@ -11,6 +11,8 @@ import '../provider/product_provider.dart';
 import '../widgets/auth/cross_platform_image.dart';
 
 class AddProductScreen extends StatefulWidget {
+  static const routeName = '/add-product';
+
   final ProductModel? product;
 
   const AddProductScreen({super.key, this.product});

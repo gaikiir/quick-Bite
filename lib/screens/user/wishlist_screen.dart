@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../models/product_model.dart';
+import '../provider/product_provider.dart';
 import '../provider/wishlist_provider.dart';
 import '../widgets/wishlist_widgets.dart';
 
@@ -139,11 +141,27 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
 
     if (confirmed == true && mounted) {
-      await context.read<WishlistProvider>().clearWishlist();
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Wishlist cleared')));
+      try {
+        await context.read<WishlistProvider>().clearWishlist();
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Wishlist cleared')));
+            }
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error clearing wishlist: $e')),
+              );
+            }
+          });
+        }
       }
     }
   }
@@ -173,16 +191,54 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
 
     if (confirmed == true && mounted) {
-      await context.read<WishlistProvider>().removeFromWishlist(wishlistId);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Item removed from wishlist')),
-        );
+      try {
+        await context.read<WishlistProvider>().removeFromWishlist(wishlistId);
+        if (mounted) {
+          // Use a more robust way to show the snackbar
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Item removed from wishlist')),
+              );
+            }
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error removing item: $e')),
+              );
+            }
+          });
+        }
       }
     }
   }
 
-  void _navigateToProductDetails(BuildContext context, String productId) {
-    Navigator.pushNamed(context, '/product-details', arguments: productId);
+  void _navigateToProductDetails(BuildContext context, String productId) async {
+    // Find the full product data from the product provider
+    final productProvider = Provider.of<ProductProvider>(
+      context,
+      listen: false,
+    );
+    final product = productProvider.products.firstWhere(
+      (p) => p.productId == productId,
+      orElse: () => ProductModel.empty(),
+    );
+
+    if (product.productId.isNotEmpty) {
+      Navigator.pushNamed(context, '/product-details', arguments: product);
+    } else {
+      // If product not found in local data, show error
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Product details not available')),
+          );
+        }
+      });
+    }
   }
 }
