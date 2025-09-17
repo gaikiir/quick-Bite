@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
+import '../../widgets/auth_debug_widget.dart';
 import '../models/product_model.dart';
 import '../provider/product_provider.dart';
 import '../widgets/auth/cross_platform_image.dart';
@@ -237,6 +238,9 @@ class _AddProductScreenState extends State<AddProductScreen> {
                         ),
                       ),
                     ),
+
+                    // Authentication Status (Debug)
+                    const AuthDebugWidget(),
 
                     // Form Section
                     Container(
