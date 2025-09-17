@@ -12,7 +12,8 @@ import 'package:quick_bite/screens/admin/admin_setup_screen.dart';
 import 'package:quick_bite/screens/admin/category_management_screen.dart';
 import 'package:quick_bite/screens/admin/orders.dart';
 import 'package:quick_bite/screens/admin/product_list_screen.dart';
-import 'package:quick_bite/screens/admin/users_screen.dart';
+import 'package:quick_bite/screens/admin/user_management_screen.dart';
+// Removed: import 'package:quick_bite/screens/admin/users_screen.dart'; // File removed
 // Authentication screens
 import 'package:quick_bite/screens/auth/forgot_password.dart';
 import 'package:quick_bite/screens/auth/login.dart';
@@ -20,7 +21,7 @@ import 'package:quick_bite/screens/auth/register.dart';
 // Constants and themes
 import 'package:quick_bite/screens/constants/theme_data.dart';
 // Models
-import 'package:quick_bite/screens/models/categoryModel.dart';
+import 'package:quick_bite/screens/models/category_model.dart';
 import 'package:quick_bite/screens/models/order_model.dart';
 // Providers
 import 'package:quick_bite/screens/provider/cart_provider.dart';
@@ -28,6 +29,7 @@ import 'package:quick_bite/screens/provider/category_provider.dart';
 import 'package:quick_bite/screens/provider/order_provider.dart';
 import 'package:quick_bite/screens/provider/product_provider.dart';
 import 'package:quick_bite/screens/provider/theme_provider.dart';
+import 'package:quick_bite/screens/provider/user_provider.dart';
 import 'package:quick_bite/screens/provider/wishlist_provider.dart';
 // User screens
 import 'package:quick_bite/screens/user/cart_screen.dart';
@@ -35,7 +37,6 @@ import 'package:quick_bite/screens/user/category_products_screen.dart';
 import 'package:quick_bite/screens/user/category_screen.dart';
 import 'package:quick_bite/screens/user/checkout_screen.dart';
 import 'package:quick_bite/screens/user/order_success_screen.dart';
-import 'package:quick_bite/screens/user/payment_screen.dart';
 import 'package:quick_bite/screens/user/product_details_screen.dart';
 import 'package:quick_bite/screens/user/products_screen.dart';
 import 'package:quick_bite/screens/user/user_root.dart';
@@ -66,30 +67,21 @@ class MyApp extends StatelessWidget {
       // Admin routes
       AdminRootScreen.routeName: (context) => const AdminRootScreen(),
       AdminSetupScreen.routeName: (context) => const AdminSetupScreen(),
-      UsersScreen.routeName: (context) => const UsersScreen(),
+      UserManagementScreen.routeName: (context) => const UserManagementScreen(),
       ProductListScreen.routeName: (context) => const ProductListScreen(),
       OrdersList.routeName: (context) => const OrdersList(),
       AddProductScreen.routeName: (context) => const AddProductScreen(),
       CategoryManagementScreen.routeName: (context) =>
-          const CategoryManagementScreen(),
+          CategoryManagementScreen(),
 
       // User routes
       UserRoot.routeName: (context) => const UserRoot(),
       CartScreen.routeName: (context) => const CartScreen(),
       ProductsScreen.routeName: (context) => const ProductsScreen(),
       WishlistScreen.routeName: (context) => const WishlistScreen(),
-      '/category': (context) => const CategoryScreen(),
-      '/checkout': (context) => const CheckoutScreen(),
-      '/payment': (context) {
-        final order = ModalRoute.of(context)?.settings.arguments as OrderModel?;
-        if (order != null) {
-          return PaymentScreen(order: order);
-        }
-        return const Scaffold(
-          body: Center(child: Text('Invalid payment request')),
-        );
-      },
-      '/order-success': (context) {
+      CategoryScreen.routeName: (context) => const CategoryScreen(),
+      CheckoutScreen.routeName: (context) => const CheckoutScreen(),
+      OrderSuccessScreen.routeName: (context) {
         final order = ModalRoute.of(context)?.settings.arguments as OrderModel?;
         if (order != null) {
           return OrderSuccessScreen(order: order);
@@ -111,8 +103,13 @@ class MyApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => CartProvider()),
         ChangeNotifierProvider(create: (_) => WishlistProvider()),
-        ChangeNotifierProvider(create: (_) => CategoryProvider()),
+        ChangeNotifierProvider(
+          create: (_) => CategoryProvider()..initCategoriesStream(),
+        ),
         ChangeNotifierProvider(create: (_) => OrderProvider()),
+        ChangeNotifierProvider(
+          create: (_) => UserProvider()..initUsersStream(),
+        ),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, theme, child) {
