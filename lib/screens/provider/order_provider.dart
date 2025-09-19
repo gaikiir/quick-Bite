@@ -41,7 +41,10 @@ class OrderProvider with ChangeNotifier {
           (snapshot) {
             try {
               _orders = snapshot.docs
-                  .map((doc) => OrderModel.fromSnapshot(doc))
+                  .map(
+                    (doc) =>
+                        OrderModel.fromMap(doc.data() as Map<String, dynamic>),
+                  )
                   .toList();
 
               debugPrint(
@@ -68,12 +71,35 @@ class OrderProvider with ChangeNotifier {
         );
   }
 
+  // Calculate delivery fee based on address
+  double calculateDeliveryFee(OrderAddress address) {
+    // Base delivery fee
+    double baseFee = 50.0;
+
+    // Add distance-based calculation if needed
+    // For now, we'll use a simple zone-based system based on street/area
+
+    final street = address.street.toLowerCase();
+
+    if (street.contains('cbd') ||
+        street.contains('town') ||
+        street.contains('central')) {
+      return baseFee; // Standard fee for CBD/town areas
+    } else if (street.contains('suburb') ||
+        street.contains('estate') ||
+        street.contains('gardens')) {
+      return baseFee + 30.0; // Extra fee for suburbs
+    } else {
+      return baseFee + 50.0; // Extra fee for far locations
+    }
+  }
+
   // Create a new order
   Future<OrderModel?> createOrder({
     required List<CartModel> cartItems,
     required OrderAddress deliveryAddress,
     required String phoneNumber,
-    PaymentMethod paymentMethod = PaymentMethod.mpesa,
+    PaymentMethod paymentMethod = PaymentMethod.cash,
     String? notes,
   }) async {
     try {
@@ -88,11 +114,11 @@ class OrderProvider with ChangeNotifier {
       // Calculate order totals
       final subtotal = cartItems.fold<double>(
         0.0,
-        (sum, item) => sum + item.totalPrice,
+        (total, item) => total + item.totalPrice,
       );
 
-      final deliveryFee = OrderModel.calculateDeliveryFee(deliveryAddress);
-      final totalAmount = subtotal + deliveryFee;
+      final deliveryFee = calculateDeliveryFee(deliveryAddress);
+      final total = subtotal + deliveryFee;
 
       // Create payment info
       final paymentInfo = PaymentInfo(
@@ -109,12 +135,10 @@ class OrderProvider with ChangeNotifier {
         orderId: orderId,
         userId: user.uid,
         userEmail: user.email ?? '',
-        userName: user.displayName ?? 'Customer',
-        userPhone: phoneNumber,
         items: cartItems,
         subtotal: subtotal,
         deliveryFee: deliveryFee,
-        totalAmount: totalAmount,
+        total: total,
         deliveryAddress: deliveryAddress,
         paymentInfo: paymentInfo,
         status: OrderStatus.pending,
@@ -233,8 +257,8 @@ class OrderProvider with ChangeNotifier {
     try {
       final doc = await _firestore.collection('orders').doc(orderId).get();
 
-      if (doc.exists) {
-        return OrderModel.fromSnapshot(doc);
+      if (doc.exists && doc.data() != null) {
+        return OrderModel.fromMap(doc.data()!);
       }
 
       return null;
@@ -268,7 +292,9 @@ class OrderProvider with ChangeNotifier {
 
       final snapshot = await query.get();
 
-      return snapshot.docs.map((doc) => OrderModel.fromSnapshot(doc)).toList();
+      return snapshot.docs
+          .map((doc) => OrderModel.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       debugPrint('Error getting user orders: $e');
       _errorMessage = 'Failed to get orders: $e';
@@ -323,7 +349,9 @@ class OrderProvider with ChangeNotifier {
 
       final snapshot = await query.get();
 
-      return snapshot.docs.map((doc) => OrderModel.fromSnapshot(doc)).toList();
+      return snapshot.docs
+          .map((doc) => OrderModel.fromMap(doc.data() as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       debugPrint('Error getting all orders: $e');
       _errorMessage = 'Failed to get orders: $e';
@@ -345,12 +373,81 @@ class OrderProvider with ChangeNotifier {
           .snapshots()
           .map(
             (snapshot) => snapshot.docs
-                .map((doc) => OrderModel.fromSnapshot(doc))
+                .map(
+                  (doc) =>
+                      OrderModel.fromMap(doc.data() as Map<String, dynamic>),
+                )
                 .toList(),
           );
     } catch (e) {
       debugPrint('Error creating orders stream: $e');
       return Stream.error('Failed to load orders: $e');
+    }
+  }
+
+  // Get orders statistics (for admin dashboard)
+  Future<Map<String, dynamic>> getOrdersStatistics() async {
+    try {
+      final snapshot = await _firestore.collection('orders').get();
+
+      int totalOrders = snapshot.docs.length;
+      double totalRevenue = 0.0;
+      Map<String, int> statusCounts = {};
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final order = OrderModel.fromMap(data);
+
+        // Add to revenue if completed
+        if (order.status == OrderStatus.delivered) {
+          totalRevenue += order.total;
+        }
+
+        // Count by status
+        final statusName = order.status.name;
+        statusCounts[statusName] = (statusCounts[statusName] ?? 0) + 1;
+      }
+
+      return {
+        'totalOrders': totalOrders,
+        'totalRevenue': totalRevenue,
+        'statusCounts': statusCounts,
+        'averageOrderValue': totalOrders > 0 ? totalRevenue / totalOrders : 0.0,
+      };
+    } catch (e) {
+      debugPrint('Error getting order statistics: $e');
+      return {
+        'totalOrders': 0,
+        'totalRevenue': 0.0,
+        'statusCounts': <String, int>{},
+        'averageOrderValue': 0.0,
+      };
+    }
+  }
+
+  // Get today's orders (for admin)
+  Future<List<OrderModel>> getTodaysOrders() async {
+    try {
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      final snapshot = await _firestore
+          .collection('orders')
+          .where(
+            'createdAt',
+            isGreaterThanOrEqualTo: startOfDay.toIso8601String(),
+          )
+          .where('createdAt', isLessThan: endOfDay.toIso8601String())
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => OrderModel.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('Error getting today\'s orders: $e');
+      return [];
     }
   }
 

@@ -278,7 +278,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         subtitle: Text(subtitle, style: theme.textTheme.bodySmall),
         value: value,
         onChanged: onChanged,
-        activeColor: theme.colorScheme.primary,
+        activeThumbColor: theme.colorScheme.primary,
       ),
     );
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:quick_bite/screens/provider/cart_provider.dart';
 import 'package:quick_bite/screens/provider/product_provider.dart';
+import 'package:quick_bite/screens/user/cart_screen.dart';
 import 'package:quick_bite/screens/widgets/cart_badge.dart';
 import 'package:quick_bite/screens/widgets/product_tile_with_cart.dart';
 
@@ -89,10 +90,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
           if (cartProvider.cartCount == 0) return const SizedBox.shrink();
 
           return FloatingActionButton.extended(
-            onPressed: () => Navigator.pushNamed(context, '/cart'),
+            onPressed: () => Navigator.pushNamed(context, CartScreen.routeName),
             icon: const Icon(Icons.shopping_cart),
             label: Text(
-              '${cartProvider.cartCount} items • \$${cartProvider.totalAmount.toStringAsFixed(2)}',
+              '${cartProvider.cartCount} items • KES ${cartProvider.totalAmount.toStringAsFixed(2)}',
             ),
             backgroundColor: Theme.of(context).primaryColor,
             foregroundColor: Colors.white,

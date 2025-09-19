@@ -42,7 +42,7 @@ Navigator.pushNamed(
   '/product-details',
   arguments: productModel,
 );
-```
+
 
 ### Route Configuration
 
@@ -62,7 +62,6 @@ onGenerateRoute: (settings) {
   }
   return null;
 },
-```
 
 ## File Structure
 

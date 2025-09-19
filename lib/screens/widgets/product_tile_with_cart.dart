@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:quick_bite/screens/models/product_model.dart';
 import 'package:quick_bite/screens/provider/cart_provider.dart';
+import 'package:quick_bite/screens/user/product_details_screen.dart';
 import 'package:quick_bite/screens/widgets/wishlist_widgets.dart';
 
 class ProductTileWithCart extends StatefulWidget {
@@ -16,7 +17,11 @@ class ProductTileWithCart extends StatefulWidget {
 
 class _ProductTileWithCartState extends State<ProductTileWithCart> {
   void _navigateToProductDetails() {
-    Navigator.pushNamed(context, '/product-details', arguments: widget.product);
+    Navigator.pushNamed(
+      context,
+      ProductDetailsScreen.routeName,
+      arguments: widget.product,
+    );
   }
 
   @override
@@ -116,7 +121,7 @@ class _ProductTileWithCartState extends State<ProductTileWithCart> {
                       children: [
                         // Price
                         Text(
-                          '\$${widget.product.productPrice.toStringAsFixed(2)}',
+                          'KES ${widget.product.productPrice.toStringAsFixed(2)}',
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,

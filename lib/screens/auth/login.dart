@@ -83,6 +83,30 @@ class _LoginScreenState extends State<LoginScreen> {
         final data = doc.data() as Map<String, dynamic>;
         final user = UserModel.fromJson(data);
 
+        // Check user status
+        if (user.status != 'Active') {
+          if (mounted) {
+            String message;
+            if (user.status == 'Suspended') {
+              message =
+                  'Your account has been suspended. Please contact support for assistance.';
+            } else if (user.status == 'Blocked') {
+              message =
+                  'Your account has been blocked. Please contact support for assistance.';
+            } else {
+              message =
+                  'Your account is not active. Please contact support for assistance.';
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(message), backgroundColor: Colors.red),
+            );
+            setState(() {
+              _isLoading = false;
+            });
+          }
+          return;
+        }
+
         // Navigate based on role
         if (mounted) {
           if (user.role.toLowerCase() == 'admin') {
@@ -121,15 +145,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   // Social login handlers
   void _handleGoogleLogin() {
-    print('Google login pressed');
+    debugPrint('Google login pressed');
   }
 
   void _handleFacebookLogin() {
-    print('Facebook login pressed');
+    debugPrint('Facebook login pressed');
   }
 
   void _handleAppleLogin() {
-    print('Apple login pressed');
+    debugPrint('Apple login pressed');
   }
 
   @override
@@ -181,6 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           focusNode: _emailFocusNode,
                           textInputAction: TextInputAction.next,
                           keyboardType: TextInputType.emailAddress,
+                          style: const TextStyle(color: Colors.black),
                           decoration: InputDecoration(
                             labelText: "Email Address",
                             prefixIcon: Icon(
@@ -221,6 +246,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           focusNode: _passwordFocusNode,
                           obscureText: _obscureText,
                           textInputAction: TextInputAction.done,
+                          style: const TextStyle(color: Colors.black),
                           decoration: InputDecoration(
                             labelText: "Password",
                             prefixIcon: Icon(
@@ -268,7 +294,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           alignment: Alignment.centerRight,
                           child: TextButton(
                             onPressed: () {
-                              Navigator.pushNamed(context, ForgotPassword.routeName);
+                              Navigator.pushNamed(
+                                context,
+                                ForgotPassword.routeName,
+                              );
                             },
                             child: Text(
                               "Forgot Password?",

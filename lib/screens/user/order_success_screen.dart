@@ -77,7 +77,7 @@ class OrderSuccessScreen extends StatelessWidget {
         Text(
           'Thank you for choosing Quick Bite. Your order has been confirmed and will be prepared soon.',
           style: theme.textTheme.bodyLarge?.copyWith(
-            color: theme.colorScheme.onSurface.withOpacity(0.8),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
           ),
           textAlign: TextAlign.center,
         ),
@@ -172,7 +172,7 @@ class OrderSuccessScreen extends StatelessWidget {
               'Address:',
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 4),
@@ -186,7 +186,7 @@ class OrderSuccessScreen extends StatelessWidget {
                 'Special Instructions:',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w500,
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(height: 4),
@@ -237,12 +237,6 @@ class OrderSuccessScreen extends StatelessWidget {
               order.paymentStatusDisplayName,
               theme,
             ),
-            if (order.paymentInfo.mpesaReference != null)
-              _buildInfoRow(
-                'M-Pesa Reference',
-                order.paymentInfo.mpesaReference!,
-                theme,
-              ),
             if (order.paymentInfo.transactionId != null)
               _buildInfoRow(
                 'Transaction ID',
@@ -299,7 +293,7 @@ class OrderSuccessScreen extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: isFirst
                             ? theme.primaryColor
-                            : theme.colorScheme.surfaceVariant,
+                            : theme.colorScheme.surfaceContainerHighest,
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -325,7 +319,9 @@ class OrderSuccessScreen extends StatelessWidget {
                               : FontWeight.normal,
                           color: isFirst
                               ? theme.colorScheme.onSurface
-                              : theme.colorScheme.onSurface.withOpacity(0.7),
+                              : theme.colorScheme.onSurface.withValues(
+                                  alpha: 0.7,
+                                ),
                         ),
                       ),
                     ),
@@ -357,7 +353,7 @@ class OrderSuccessScreen extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   )
                 : theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
           ),
           Expanded(
@@ -467,23 +463,27 @@ class OrderSuccessScreen extends StatelessWidget {
 
   IconData _getPaymentMethodIcon(PaymentMethod method) {
     switch (method) {
-      case PaymentMethod.mpesa:
-        return Icons.phone_android;
       case PaymentMethod.cash:
         return Icons.money;
       case PaymentMethod.card:
         return Icons.credit_card;
+      case PaymentMethod.mpesa:
+        return Icons.phone_android;
     }
+    // Default icon if method is not recognized
+    return Icons.payment;
   }
 
   String _getPaymentMethodName(PaymentMethod method) {
     switch (method) {
-      case PaymentMethod.mpesa:
-        return 'M-Pesa';
       case PaymentMethod.cash:
         return 'Cash on Delivery';
       case PaymentMethod.card:
         return 'Credit/Debit Card';
+      case PaymentMethod.mpesa:
+        return 'M-Pesa';
     }
+    // Default name if method is not recognized
+    return 'Unknown';
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:quick_bite/screens/models/product_model.dart';
 import 'package:quick_bite/screens/provider/cart_provider.dart';
+import 'package:quick_bite/screens/user/cart_screen.dart';
 
 class AddToCartButton extends StatefulWidget {
   final ProductModel product;
@@ -55,7 +56,7 @@ class _AddToCartButtonState extends State<AddToCartButton> {
               label: 'VIEW CART',
               textColor: Colors.white,
               onPressed: () {
-                Navigator.pushNamed(context, '/cart');
+                Navigator.pushNamed(context, CartScreen.routeName);
               },
             ),
           ),

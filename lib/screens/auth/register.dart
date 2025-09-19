@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:quick_bite/screens/constants/validate.dart';
 import 'package:quick_bite/screens/models/user_model.dart';
-import 'package:quick_bite/screens/services/image_function.dart';
 import 'package:quick_bite/screens/widgets/social_media_icons.dart';
 
 class Register extends StatefulWidget {
@@ -60,32 +59,49 @@ class _RegisterState extends State<Register> {
     super.dispose();
   }
 
-  // Upload local image - UPDATED to match new ImageFunction parameters
+  // Upload local image with image picker dialog
   Future<void> _localImagePicker() async {
     final ImagePicker imagePicker = ImagePicker();
-    await ImageFunction.imagePickerDialog(
+
+    // Show image picker dialog
+    showDialog(
       context: context,
-      cameraFun: () async {
-        _imagePicker = await imagePicker.pickImage(
-          source: ImageSource.camera,
-          imageQuality: 75,
-          maxWidth: 800,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select Image'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Camera'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  _imagePicker = await imagePicker.pickImage(
+                    source: ImageSource.camera,
+                    imageQuality: 75,
+                    maxWidth: 800,
+                  );
+                  setState(() {});
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Gallery'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  _imagePicker = await imagePicker.pickImage(
+                    source: ImageSource.gallery,
+                    imageQuality: 75,
+                    maxWidth: 800,
+                  );
+                  setState(() {});
+                },
+              ),
+            ],
+          ),
         );
-        setState(() {});
       },
-      galleryFun: () async {
-        _imagePicker = await imagePicker.pickImage(
-          source: ImageSource.gallery,
-          imageQuality: 75,
-          maxWidth: 800,
-        );
-        setState(() {});
-      },
-      // deleteFun: () async {
-      //   setState(() {
-      //     _imagePicker = null;
-      //   });
-      // },
     );
   }
 
@@ -303,6 +319,7 @@ class _RegisterState extends State<Register> {
                         controller: _userNameController,
                         focusNode: _userNameFocusNode,
                         textInputAction: TextInputAction.next,
+                        style: const TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: "Full Name",
                           prefixIcon: Icon(
@@ -341,6 +358,7 @@ class _RegisterState extends State<Register> {
                         focusNode: _emailFocusNode,
                         textInputAction: TextInputAction.next,
                         keyboardType: TextInputType.emailAddress,
+                        style: const TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: "Email Address",
                           prefixIcon: Icon(
@@ -381,6 +399,7 @@ class _RegisterState extends State<Register> {
                         focusNode: _passwordFocusNode,
                         obscureText: _obscureText,
                         textInputAction: TextInputAction.next,
+                        style: const TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: "Password",
                           prefixIcon: Icon(
@@ -434,6 +453,7 @@ class _RegisterState extends State<Register> {
                         focusNode: _repeatPasswordFocusNode,
                         obscureText: _obscureText,
                         textInputAction: TextInputAction.done,
+                        style: const TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           labelText: "Confirm Password",
                           prefixIcon: Icon(

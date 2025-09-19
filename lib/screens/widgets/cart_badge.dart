@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:quick_bite/screens/provider/cart_provider.dart';
+import 'package:quick_bite/screens/user/cart_screen.dart';
 
 class CartBadge extends StatelessWidget {
   final VoidCallback? onTap;
@@ -16,7 +17,9 @@ class CartBadge extends StatelessWidget {
         return Stack(
           children: [
             IconButton(
-              onPressed: onTap ?? () => Navigator.pushNamed(context, '/cart'),
+              onPressed:
+                  onTap ??
+                  () => Navigator.pushNamed(context, CartScreen.routeName),
               icon: const Icon(Icons.shopping_cart),
             ),
             if (cartCount > 0)

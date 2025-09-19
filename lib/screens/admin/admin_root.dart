@@ -3,8 +3,7 @@ import 'package:quick_bite/screens/admin/home.dart';
 import 'package:quick_bite/screens/admin/orders.dart';
 import 'package:quick_bite/screens/admin/product_list_screen.dart';
 import 'package:quick_bite/screens/admin/profile.dart';
-import 'package:quick_bite/screens/admin/users_screen.dart';
-
+import 'package:quick_bite/screens/admin/user_management_screen.dart';
 
 class AdminRootScreen extends StatefulWidget {
   static const routeName = '/AdminRootScreen';
@@ -26,7 +25,7 @@ class _AdminRootScreenState extends State<AdminRootScreen> {
       AdminHomeScreen(),
       ProductListScreen(),
       OrdersList(),
-      UsersScreen(),
+      UserManagementScreen(),
       ProfileScreen(),
     ];
     controller = PageController(initialPage: currentScreen);
@@ -70,14 +69,8 @@ class _AdminRootScreenState extends State<AdminRootScreen> {
             icon: Icon(Icons.shopping_cart),
             label: 'Orders',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people),
-            label: 'Users',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Users'),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
     );

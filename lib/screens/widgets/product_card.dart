@@ -7,11 +7,11 @@ class ProductCard extends StatelessWidget {
   final VoidCallback onDeletePressed;
 
   const ProductCard({
-    Key? key,
+    super.key,
     required this.product,
     required this.onEditPressed,
     required this.onDeletePressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -83,7 +83,7 @@ class ProductCard extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        '\$${product.productPrice.toStringAsFixed(2)}',
+                        'KES ${product.productPrice.toStringAsFixed(2)}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,

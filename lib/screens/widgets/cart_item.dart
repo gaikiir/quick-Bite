@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:quick_bite/screens/models/cart_model.dart';
 import 'package:quick_bite/screens/widgets/quantity_select.dart';
+import 'package:quick_bite/services/image_helper.dart';
 
 class CartItemCard extends StatelessWidget {
   final CartModel cartItem;
@@ -27,22 +28,11 @@ class CartItemCard extends StatelessWidget {
             // Product Image
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.network(
-                cartItem.productImage,
+              child: ImageHelper.buildNetworkImage(
+                imageUrl: cartItem.productImage,
                 width: 80,
                 height: 80,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    width: 80,
-                    height: 80,
-                    color: Colors.grey.shade200,
-                    child: const Icon(
-                      Icons.image_not_supported,
-                      color: Colors.grey,
-                    ),
-                  );
-                },
               ),
             ),
             const SizedBox(width: 12),
@@ -116,14 +106,14 @@ class CartItemCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '\$${cartItem.productPrice.toStringAsFixed(2)}',
+                            'KES ${cartItem.productPrice.toStringAsFixed(2)}',
                             style: TextStyle(
                               fontSize: 14,
                               color: Colors.grey.shade600,
                             ),
                           ),
                           Text(
-                            '\$${cartItem.totalPrice.toStringAsFixed(2)}',
+                            'KES ${cartItem.totalPrice.toStringAsFixed(2)}',
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,

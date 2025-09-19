@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class AdminManager {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -17,7 +18,7 @@ class AdminManager {
           .get();
       return adminDoc.exists;
     } catch (e) {
-      print('Error checking admin status: $e');
+      debugPrint('Error checking admin status: $e');
       return false;
     }
   }
@@ -32,7 +33,7 @@ class AdminManager {
       // Check if current user is admin
       final isAdmin = await isCurrentUserAdmin();
       if (!isAdmin) {
-        print('Only admins can add other admins');
+        debugPrint('Only admins can add other admins');
         return false;
       }
 
@@ -45,10 +46,10 @@ class AdminManager {
         'addedBy': _auth.currentUser?.uid,
       });
 
-      print('Successfully added admin: $userId');
+      debugPrint('Successfully added admin: $userId');
       return true;
     } catch (e) {
-      print('Error adding admin: $e');
+      debugPrint('Error adding admin: $e');
       return false;
     }
   }
@@ -59,15 +60,15 @@ class AdminManager {
       // Check if current user is admin
       final isAdmin = await isCurrentUserAdmin();
       if (!isAdmin) {
-        print('Only admins can remove admin privileges');
+        debugPrint('Only admins can remove admin privileges');
         return false;
       }
 
       await _firestore.collection('admins').doc(userId).delete();
-      print('Successfully removed admin: $userId');
+      debugPrint('Successfully removed admin: $userId');
       return true;
     } catch (e) {
-      print('Error removing admin: $e');
+      debugPrint('Error removing admin: $e');
       return false;
     }
   }
@@ -77,14 +78,14 @@ class AdminManager {
     try {
       final isAdmin = await isCurrentUserAdmin();
       if (!isAdmin) {
-        print('Only admins can view admin list');
+        debugPrint('Only admins can view admin list');
         return [];
       }
 
       final snapshot = await _firestore.collection('admins').get();
       return snapshot.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
     } catch (e) {
-      print('Error getting admins: $e');
+      debugPrint('Error getting admins: $e');
       return [];
     }
   }
@@ -94,7 +95,7 @@ class AdminManager {
     try {
       final user = _auth.currentUser;
       if (user == null) {
-        print('No user logged in');
+        debugPrint('No user logged in');
         return false;
       }
 
@@ -104,7 +105,7 @@ class AdminManager {
           .limit(1)
           .get();
       if (adminSnapshot.docs.isNotEmpty) {
-        print('Admins already exist. Use addAdmin() instead.');
+        debugPrint('Admins already exist. Use addAdmin() instead.');
         return false;
       }
 
@@ -117,10 +118,10 @@ class AdminManager {
         'isFirstAdmin': true,
       });
 
-      print('Successfully created first admin: ${user.email}');
+      debugPrint('Successfully created first admin: ${user.email}');
       return true;
     } catch (e) {
-      print('Error initializing first admin: $e');
+      debugPrint('Error initializing first admin: $e');
       return false;
     }
   }

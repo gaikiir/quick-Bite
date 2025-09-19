@@ -111,6 +111,6 @@ class WishlistModel {
 
   @override
   String toString() {
-    return 'WishlistModel(wishlistId: $wishlistId, productId: $productId, productName: $productName, price: \$$productPrice)';
+    return 'WishlistModel(wishlistId: $wishlistId, productId: $productId, productName: $productName, price: KES $productPrice)';
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:quick_bite/screens/provider/category_provider.dart';
 import 'package:quick_bite/screens/provider/product_provider.dart';
+import 'package:quick_bite/screens/user/category_screen.dart';
 import 'package:quick_bite/screens/user/product_details_screen.dart';
 import 'package:quick_bite/screens/widgets/category_widgets.dart';
 
@@ -33,19 +34,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     // Initialize providers after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        final categoryProvider = Provider.of<CategoryProvider>(
-          context,
-          listen: false,
-        );
         final productProvider = Provider.of<ProductProvider>(
           context,
           listen: false,
         );
 
-        // Only initialize if not already initialized
-        if (categoryProvider.categories.isEmpty) {
-          categoryProvider.initCategoriesStream();
-        }
+        // Initialize streams if needed
         if (productProvider.products.isEmpty) {
           productProvider.initProductsStream();
         }
@@ -146,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         Container(
           margin: const EdgeInsets.only(right: 16),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(12),
           ),
           child: IconButton(
@@ -249,13 +243,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     end: Alignment.bottomRight,
                     colors: [
                       offer['color'] as Color,
-                      (offer['color'] as Color).withOpacity(0.8),
+                      (offer['color'] as Color).withValues(alpha: 0.8),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: (offer['color'] as Color).withOpacity(0.3),
+                      color: (offer['color'] as Color).withValues(alpha: 0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -288,7 +282,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           Text(
                             offer['description'] as String,
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                               fontSize: 14,
                             ),
                           ),
@@ -299,7 +293,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       width: 80,
                       height: 80,
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Center(
@@ -357,7 +351,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Row(
                 children: [
                   TextButton(
-                    onPressed: () => Navigator.pushNamed(context, '/category'),
+                    onPressed: () =>
+                        Navigator.pushNamed(context, CategoryScreen.routeName),
                     child: const Text('See All'),
                   ),
                 ],
@@ -509,7 +504,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
+                                  color: Colors.black.withValues(alpha: 0.08),
                                   blurRadius: 20,
                                   offset: const Offset(0, 8),
                                 ),
@@ -527,10 +522,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       colors: [
                                         const Color(
                                           0xFF667EEA,
-                                        ).withOpacity(0.1),
+                                        ).withValues(alpha: 0.1),
                                         const Color(
                                           0xFF764BA2,
-                                        ).withOpacity(0.1),
+                                        ).withValues(alpha: 0.1),
                                       ],
                                     ),
                                     borderRadius: const BorderRadius.vertical(
@@ -617,7 +612,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        '\$${product.productPrice.toStringAsFixed(2)}',
+                                        'KES ${product.productPrice.toStringAsFixed(2)}',
                                         style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
@@ -705,16 +700,18 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: Container(
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: const Color(0xFF667EEA).withOpacity(0.05),
+          color: const Color(0xFF667EEA).withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF667EEA).withOpacity(0.2)),
+          border: Border.all(
+            color: const Color(0xFF667EEA).withValues(alpha: 0.2),
+          ),
         ),
         child: Column(
           children: [
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFF667EEA).withOpacity(0.1),
+                color: const Color(0xFF667EEA).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Icon(

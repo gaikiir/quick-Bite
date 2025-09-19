@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../services/image_helper.dart';
 import '../provider/product_provider.dart';
-import '../services/product_service.dart';
 
 class CloudinaryManagerScreen extends StatelessWidget {
   const CloudinaryManagerScreen({super.key});
 
   Future<void> _openCloudinaryDashboard(BuildContext context) async {
-    final productService = ProductService();
-    final urlString = productService.getCloudinaryManagementUrl();
+    // Direct Cloudinary dashboard URL
+    const urlString = 'https://console.cloudinary.com/';
     final url = Uri.parse(urlString);
 
     try {
@@ -80,8 +80,8 @@ class CloudinaryManagerScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Expanded(
-                      child: Image.network(
-                        product.productImage,
+                      child: ImageHelper.buildNetworkImage(
+                        imageUrl: product.productImage,
                         fit: BoxFit.cover,
                       ),
                     ),
