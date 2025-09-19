@@ -140,7 +140,7 @@ class _ProductDetailsContentState extends State<ProductDetailsContent> {
         Row(
           children: [
             Text(
-              '\$${product.productPrice.toStringAsFixed(2)}',
+              'KES ${product.productPrice.toStringAsFixed(2)}',
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -225,7 +225,7 @@ class _ProductDetailsContentState extends State<ProductDetailsContent> {
             ),
             const Spacer(),
             Text(
-              'Total: \$${(product.productPrice * _selectedQuantity).toStringAsFixed(2)}',
+              'Total: KES ${(product.productPrice * _selectedQuantity).toStringAsFixed(2)}',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../provider/cart_provider.dart';
 import '../widgets/cart_item.dart';
+import 'checkout_screen.dart';
 
 class CartScreen extends StatefulWidget {
   static const routeName = '/cart';
@@ -32,8 +33,9 @@ class _CartScreenState extends State<CartScreen> {
         actions: [
           Consumer<CartProvider>(
             builder: (context, cartProvider, child) {
-              if (cartProvider.cartItems.isEmpty)
+              if (cartProvider.cartItems.isEmpty) {
                 return const SizedBox.shrink();
+              }
 
               return TextButton(
                 onPressed: () => _showClearCartDialog(context),
@@ -176,7 +178,7 @@ class _CartScreenState extends State<CartScreen> {
                   ),
                 ),
                 Text(
-                  '\$${cartProvider.totalAmount.toStringAsFixed(2)}',
+                  'KES ${cartProvider.totalAmount.toStringAsFixed(2)}',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -266,6 +268,6 @@ class _CartScreenState extends State<CartScreen> {
     }
 
     // Navigate to checkout screen
-    Navigator.pushNamed(context, '/checkout');
+    Navigator.pushNamed(context, CheckoutScreen.routeName);
   }
 }

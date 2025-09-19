@@ -23,11 +23,11 @@ class CartProvider with ChangeNotifier {
   int get cartCount => _cartItems.length;
 
   double get totalAmount {
-    return _cartItems.fold(0.0, (sum, item) => sum + item.totalPrice);
+    return _cartItems.fold(0.0, (total, item) => total + item.totalPrice);
   }
 
   int get totalQuantity {
-    return _cartItems.fold(0, (sum, item) => sum + item.quantity);
+    return _cartItems.fold(0, (totalQty, item) => totalQty + item.quantity);
   }
 
   bool isInCart(String productId) {
@@ -117,7 +117,7 @@ class CartProvider with ChangeNotifier {
       _cartItems.removeWhere((item) => item.cartId == cartId);
       notifyListeners();
     } catch (e) {
-      print('Error removing from cart: $e');
+      debugPrint('Error removing from cart: $e');
       rethrow;
     } finally {
       _isLoading = false;
@@ -154,7 +154,7 @@ class CartProvider with ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
-      print('Error updating quantity: $e');
+      debugPrint('Error updating quantity: $e');
       rethrow;
     } finally {
       _isLoading = false;
@@ -184,7 +184,7 @@ class CartProvider with ChangeNotifier {
       _cartItems.clear();
       notifyListeners();
     } catch (e) {
-      print('Error clearing cart: $e');
+      debugPrint('Error clearing cart: $e');
       rethrow;
     } finally {
       _isLoading = false;
@@ -255,7 +255,7 @@ class CartProvider with ChangeNotifier {
             notifyListeners();
           },
           onError: (error) {
-            print('Error listening to cart changes: $error');
+            debugPrint('Error listening to cart changes: $error');
           },
         );
   }

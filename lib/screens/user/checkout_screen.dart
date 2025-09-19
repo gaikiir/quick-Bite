@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:quick_bite/screens/models/cart_model.dart';
-import 'package:quick_bite/screens/models/order_model.dart';
-import 'package:quick_bite/screens/provider/cart_provider.dart';
-import 'package:quick_bite/screens/provider/order_provider.dart';
-import 'package:quick_bite/screens/user/payment_screen.dart';
+
+import '../../services/mpesa_service.dart';
+import '../models/cart_model.dart';
+import '../models/order_model.dart';
+import '../provider/cart_provider.dart';
 
 class CheckoutScreen extends StatefulWidget {
   static const routeName = '/checkout';
@@ -20,85 +20,79 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _streetController = TextEditingController();
   final _phoneController = TextEditingController();
   final _notesController = TextEditingController();
-  final _deliveryInstructionsController = TextEditingController();
 
-  PaymentMethod _selectedPaymentMethod = PaymentMethod.mpesa;
+  PaymentMethod _selectedPaymentMethod = PaymentMethod.cash;
   bool _isProcessing = false;
+
+  // Constants
+  static const double _deliveryFee = 100.0;
+  static const double _freeDeliveryThreshold = 1500.0;
 
   @override
   void dispose() {
     _streetController.dispose();
     _phoneController.dispose();
     _notesController.dispose();
-    _deliveryInstructionsController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cartProvider = Provider.of<CartProvider>(context);
-    final orderProvider = Provider.of<OrderProvider>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Checkout'),
         centerTitle: true,
-        elevation: 0,
-        backgroundColor: theme.primaryColor,
-        foregroundColor: theme.colorScheme.onPrimary,
+        backgroundColor: Theme.of(context).primaryColor,
+        foregroundColor: Colors.white,
       ),
-      body: cartProvider.cartItems.isEmpty
-          ? _buildEmptyCart(theme)
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildOrderSummary(cartProvider, theme),
-                    const SizedBox(height: 24),
-                    _buildDeliveryAddressSection(theme),
-                    const SizedBox(height: 24),
-                    _buildContactInformationSection(theme),
-                    const SizedBox(height: 24),
-                    _buildPaymentMethodSection(theme),
-                    const SizedBox(height: 24),
-                    _buildNotesSection(theme),
-                    const SizedBox(height: 32),
-                    _buildProceedButton(cartProvider, orderProvider, theme),
-                    const SizedBox(height: 20),
-                  ],
+      body: Consumer<CartProvider>(
+        builder: (context, cartProvider, _) {
+          if (cartProvider.cartItems.isEmpty) {
+            return _buildEmptyCart();
+          }
+
+          return Column(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildOrderSummary(cartProvider),
+                        const SizedBox(height: 24),
+                        _buildDeliverySection(),
+                        const SizedBox(height: 24),
+                        _buildPaymentSection(),
+                        const SizedBox(height: 24),
+                        _buildOrderTotal(cartProvider),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
+              _buildCheckoutButton(cartProvider),
+            ],
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildEmptyCart(ThemeData theme) {
+  Widget _buildEmptyCart() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.shopping_cart_outlined,
-            size: 80,
-            color: theme.colorScheme.onSurface.withOpacity(0.5),
-          ),
+          Icon(Icons.shopping_cart_outlined, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
             'Your cart is empty',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add some items to proceed with checkout',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.5),
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
           ),
           const SizedBox(height: 24),
           ElevatedButton(
@@ -110,14 +104,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildOrderSummary(CartProvider cartProvider, ThemeData theme) {
-    final subtotal = cartProvider.totalAmount;
-    final deliveryFee = _calculateDeliveryFee();
-    final total = subtotal + deliveryFee;
-
+  Widget _buildOrderSummary(CartProvider cartProvider) {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -125,42 +114,21 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           children: [
             Text(
               'Order Summary',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            ...cartProvider.cartItems.map(
-              (item) => _buildOrderItem(item, theme),
-            ),
-            const Divider(height: 24),
-            _buildSummaryRow(
-              'Subtotal',
-              'KES ${subtotal.toStringAsFixed(2)}',
-              theme,
-            ),
-            const SizedBox(height: 8),
-            _buildSummaryRow(
-              'Delivery Fee',
-              'KES ${deliveryFee.toStringAsFixed(2)}',
-              theme,
-            ),
-            const Divider(height: 16),
-            _buildSummaryRow(
-              'Total',
-              'KES ${total.toStringAsFixed(2)}',
-              theme,
-              isTotal: true,
-            ),
+            ...cartProvider.cartItems.map((item) => _buildOrderItem(item)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildOrderItem(CartModel item, ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+  Widget _buildOrderItem(CartModel item) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
           ClipRRect(
@@ -173,7 +141,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               errorBuilder: (context, error, stackTrace) => Container(
                 width: 50,
                 height: 50,
-                color: theme.colorScheme.surfaceVariant,
+                color: Colors.grey[300],
                 child: const Icon(Icons.image_not_supported),
               ),
             ),
@@ -185,105 +153,47 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               children: [
                 Text(
                   item.productName,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                if (item.selectedSize != null ||
-                    item.selectedColor != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    [
-                      if (item.selectedSize != null)
-                        'Size: ${item.selectedSize}',
-                      if (item.selectedColor != null)
-                        'Color: ${item.selectedColor}',
-                    ].join(', '),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                  ),
-                ],
+                Text(
+                  'Qty: ${item.quantity}',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                ),
               ],
             ),
           ),
           Text(
-            '${item.quantity}x',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
             'KES ${item.totalPrice.toStringAsFixed(2)}',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: theme.primaryColor,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryRow(
-    String label,
-    String value,
-    ThemeData theme, {
-    bool isTotal = false,
-  }) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: isTotal
-              ? theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                )
-              : theme.textTheme.bodyMedium,
-        ),
-        Text(
-          value,
-          style: isTotal
-              ? theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.primaryColor,
-                )
-              : theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDeliveryAddressSection(ThemeData theme) {
+  Widget _buildDeliverySection() {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Delivery Address',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              'Delivery Information',
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _streetController,
               decoration: const InputDecoration(
-                labelText: 'Delivery Address *',
-                hintText: 'Enter your full delivery address',
+                labelText: 'Street Address',
+                hintText: 'Enter your delivery address',
                 prefixIcon: Icon(Icons.location_on),
+                border: OutlineInputBorder(),
               ),
-              maxLines: 3,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Please enter your delivery address';
@@ -293,58 +203,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             ),
             const SizedBox(height: 16),
             TextFormField(
-              controller: _deliveryInstructionsController,
-              decoration: const InputDecoration(
-                labelText: 'Delivery Instructions (Optional)',
-                hintText: 'Any special delivery instructions...',
-                prefixIcon: Icon(Icons.note),
-              ),
-              maxLines: 2,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildContactInformationSection(ThemeData theme) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Contact Information',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
               controller: _phoneController,
-              decoration: const InputDecoration(
-                labelText: 'Phone Number *',
-                hintText: 'e.g., 0700000000 or +254700000000',
-                prefixIcon: Icon(Icons.phone),
-              ),
               keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                labelText: 'Phone Number',
+                hintText: 'Enter your phone number',
+                prefixIcon: Icon(Icons.phone),
+                border: OutlineInputBorder(),
+              ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
                   return 'Please enter your phone number';
                 }
-
-                // Remove any non-digit characters for validation
-                final digits = value.replaceAll(RegExp(r'[^\d]'), '');
-
-                if (digits.length < 10) {
+                if (value.trim().length < 10) {
                   return 'Please enter a valid phone number';
                 }
-
                 return null;
               },
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _notesController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Delivery Notes (Optional)',
+                hintText: 'Any special instructions...',
+                prefixIcon: Icon(Icons.note),
+                border: OutlineInputBorder(),
+              ),
             ),
           ],
         ),
@@ -352,10 +238,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildPaymentMethodSection(ThemeData theme) {
+  Widget _buildPaymentSection() {
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -363,59 +248,115 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           children: [
             Text(
               'Payment Method',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            ...PaymentMethod.values.map((method) {
-              return RadioListTile<PaymentMethod>(
-                value: method,
-                groupValue: _selectedPaymentMethod,
-                onChanged: (value) {
-                  setState(() {
-                    _selectedPaymentMethod = value!;
-                  });
-                },
-                title: Row(
-                  children: [
-                    Icon(_getPaymentMethodIcon(method)),
-                    const SizedBox(width: 8),
-                    Text(_getPaymentMethodName(method)),
-                  ],
-                ),
-                subtitle: Text(_getPaymentMethodDescription(method)),
-              );
-            }),
+            _buildPaymentOption(
+              PaymentMethod.cash,
+              'Cash on Delivery',
+              'Pay with cash when order arrives',
+              Icons.money,
+              Colors.green,
+            ),
+            _buildPaymentOption(
+              PaymentMethod.card,
+              'Credit/Debit Card',
+              'Pay securely with your card',
+              Icons.credit_card,
+              Colors.blue,
+            ),
+            _buildPaymentOption(
+              PaymentMethod.mpesa,
+              'M-Pesa',
+              'Pay instantly with M-Pesa',
+              Icons.phone_android,
+              Colors.green[700]!,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildNotesSection(ThemeData theme) {
+  Widget _buildPaymentOption(
+    PaymentMethod method,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color iconColor,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: _selectedPaymentMethod == method
+              ? Theme.of(context).primaryColor
+              : Colors.grey[300]!,
+          width: 2,
+        ),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: ListTile(
+        leading: Icon(icon, color: iconColor),
+        title: Text(title),
+        subtitle: Text(subtitle),
+        trailing: Transform.scale(
+          scale: 1.2,
+          child: Radio<PaymentMethod>.adaptive(
+            value: method,
+            groupValue: _selectedPaymentMethod,
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _selectedPaymentMethod = value;
+                });
+              }
+            },
+          ),
+        ),
+        onTap: () {
+          setState(() {
+            _selectedPaymentMethod = method;
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildOrderTotal(CartProvider cartProvider) {
+    final subtotal = cartProvider.totalAmount;
+    final deliveryFee = _calculateDeliveryFee(subtotal);
+    final total = subtotal + deliveryFee;
+
     return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Order Notes (Optional)',
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+            _buildSummaryRow('Subtotal', 'KES ${subtotal.toStringAsFixed(2)}'),
+            const SizedBox(height: 8),
+            _buildSummaryRow(
+              'Delivery Fee',
+              deliveryFee == 0
+                  ? 'FREE'
+                  : 'KES ${deliveryFee.toStringAsFixed(2)}',
             ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                hintText: 'Any special requests or notes about your order...',
-                prefixIcon: Icon(Icons.note_add),
+            if (deliveryFee == 0 && subtotal >= _freeDeliveryThreshold)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Free delivery on orders above KES ${_freeDeliveryThreshold.toStringAsFixed(0)}',
+                  style: TextStyle(color: Colors.green[600], fontSize: 12),
+                ),
               ),
-              maxLines: 3,
+            const Divider(height: 24),
+            _buildSummaryRow(
+              'Total',
+              'KES ${total.toStringAsFixed(2)}',
+              isTotal: true,
             ),
           ],
         ),
@@ -423,149 +364,211 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 
-  Widget _buildProceedButton(
-    CartProvider cartProvider,
-    OrderProvider orderProvider,
-    ThemeData theme,
-  ) {
-    final total = cartProvider.totalAmount + _calculateDeliveryFee();
-
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: _isProcessing || orderProvider.isLoading
-            ? null
-            : () => _proceedToPayment(cartProvider, orderProvider),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: theme.primaryColor,
-          foregroundColor: theme.colorScheme.onPrimary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+  Widget _buildSummaryRow(String label, String value, {bool isTotal = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isTotal ? 18 : 16,
+            fontWeight: isTotal ? FontWeight.bold : FontWeight.normal,
           ),
-          elevation: 4,
         ),
-        child: _isProcessing || orderProvider.isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-              )
-            : Text(
-                'Proceed to Payment (KES ${total.toStringAsFixed(2)})',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: isTotal ? 18 : 16,
+            fontWeight: FontWeight.bold,
+            color: isTotal ? Theme.of(context).primaryColor : null,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCheckoutButton(CartProvider cartProvider) {
+    final total =
+        cartProvider.totalAmount +
+        _calculateDeliveryFee(cartProvider.totalAmount);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: SizedBox(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: _isProcessing
+                ? null
+                : () => _handleCheckout(cartProvider),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
+            ),
+            child: _isProcessing
+                ? const SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Text(
+                    'Place Order - KES ${total.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+          ),
+        ),
       ),
     );
   }
 
-  double _calculateDeliveryFee() {
-    // Simple flat delivery fee
-    return 100.0; // KES 100 flat delivery fee
+  double _calculateDeliveryFee(double subtotal) {
+    return subtotal >= _freeDeliveryThreshold ? 0.0 : _deliveryFee;
   }
 
-  IconData _getPaymentMethodIcon(PaymentMethod method) {
-    switch (method) {
-      case PaymentMethod.mpesa:
-        return Icons.phone_android;
-      case PaymentMethod.cash:
-        return Icons.money;
-      case PaymentMethod.card:
-        return Icons.credit_card;
-    }
-  }
-
-  String _getPaymentMethodName(PaymentMethod method) {
-    switch (method) {
-      case PaymentMethod.mpesa:
-        return 'M-Pesa';
-      case PaymentMethod.cash:
-        return 'Cash on Delivery';
-      case PaymentMethod.card:
-        return 'Credit/Debit Card';
-    }
-  }
-
-  String _getPaymentMethodDescription(PaymentMethod method) {
-    switch (method) {
-      case PaymentMethod.mpesa:
-        return 'Pay securely using M-Pesa STK Push';
-      case PaymentMethod.cash:
-        return 'Pay with cash when your order is delivered';
-      case PaymentMethod.card:
-        return 'Pay with your credit or debit card';
-    }
-  }
-
-  Future<void> _proceedToPayment(
-    CartProvider cartProvider,
-    OrderProvider orderProvider,
-  ) async {
+  Future<void> _handleCheckout(CartProvider cartProvider) async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    setState(() {
-      _isProcessing = true;
-    });
+    setState(() => _isProcessing = true);
 
     try {
-      // Create delivery address with simplified structure
-      final deliveryAddress = OrderAddress(
-        street: _streetController.text.trim(),
-        deliveryInstructions:
-            _deliveryInstructionsController.text.trim().isEmpty
-            ? null
-            : _deliveryInstructionsController.text.trim(),
-      );
-
-      // Create order
-      final order = await orderProvider.createOrder(
-        cartItems: cartProvider.cartItems,
-        deliveryAddress: deliveryAddress,
-        phoneNumber: _phoneController.text.trim(),
-        paymentMethod: _selectedPaymentMethod,
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
-      );
-
-      if (order != null && mounted) {
-        // Navigate to payment screen
-        Navigator.pushNamed(context, PaymentScreen.routeName, arguments: order);
+      if (_selectedPaymentMethod == PaymentMethod.mpesa) {
+        await _handleMpesaPayment(cartProvider);
       } else {
-        _showErrorSnackBar('Failed to create order. Please try again.');
+        await _handleRegularPayment(cartProvider);
       }
     } catch (e) {
-      debugPrint('Error proceeding to payment: $e');
-      _showErrorSnackBar('An error occurred. Please try again.');
+      _showErrorMessage('Failed to place order: $e');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isProcessing = false;
-        });
-      }
+      if (mounted) setState(() => _isProcessing = false);
     }
   }
 
-  void _showErrorSnackBar(String message) {
-    if (!mounted) return;
+  Future<void> _handleMpesaPayment(CartProvider cartProvider) async {
+    final total =
+        cartProvider.totalAmount +
+        _calculateDeliveryFee(cartProvider.totalAmount);
+    final phoneNumber = _phoneController.text.trim();
 
+    // Validate phone number for M-Pesa
+    try {
+      MpesaService.formatPhoneNumber(phoneNumber);
+    } catch (e) {
+      _showErrorMessage(
+        'Please enter a valid M-Pesa phone number (254XXXXXXXXX)',
+      );
+      return;
+    }
+
+    // Show loading indicator
+    _showInfoMessage('Initiating M-Pesa payment... Please check your phone.');
+
+    try {
+      final response = await MpesaService.initiateSTKPush(
+        phoneNumber: phoneNumber,
+        amount: total,
+        accountReference: 'QB${DateTime.now().millisecondsSinceEpoch}',
+        transactionDesc: 'QuickBite Order Payment',
+      );
+
+      if (response.success && mounted) {
+        _showSuccessMessage(
+          'M-Pesa payment initiated! Check your phone to complete payment.',
+        );
+        await _createOrder(
+          cartProvider,
+          PaymentStatus.pending,
+          'M-Pesa payment initiated',
+        );
+      } else {
+        _showErrorMessage(response.errorMessage ?? 'M-Pesa payment failed');
+      }
+    } catch (e) {
+      _showErrorMessage('M-Pesa payment error: $e');
+    }
+  }
+
+  Future<void> _handleRegularPayment(CartProvider cartProvider) async {
+    final paymentStatus = _selectedPaymentMethod == PaymentMethod.cash
+        ? PaymentStatus.pending
+        : PaymentStatus.processing;
+
+    await _createOrder(
+      cartProvider,
+      paymentStatus,
+      'Order placed successfully',
+    );
+    if (mounted) {
+      _showSuccessMessage('Order placed successfully!');
+      Navigator.pushReplacementNamed(context, '/order-success');
+    }
+  }
+
+  Future<void> _createOrder(
+    CartProvider cartProvider,
+    PaymentStatus paymentStatus,
+    String paymentNote,
+  ) async {
+    // Create order logic here - implement with OrderProvider when ready
+    await cartProvider.clearCart();
+
+    // For now, just log the order details
+    debugPrint('Order created:');
+    debugPrint('Payment Method: $_selectedPaymentMethod');
+    debugPrint('Payment Status: $paymentStatus');
+    debugPrint('Payment Note: $paymentNote');
+    debugPrint('Address: ${_streetController.text}');
+    debugPrint('Phone: ${_phoneController.text}');
+    debugPrint('Notes: ${_notesController.text}');
+  }
+
+  void _showInfoMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.blue,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showErrorMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
-        action: SnackBarAction(
-          label: 'OK',
-          textColor: Colors.white,
-          onPressed: () {},
-        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }

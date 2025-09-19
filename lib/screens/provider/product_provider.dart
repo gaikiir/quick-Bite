@@ -2,20 +2,22 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../services/cloudinary_service.dart';
 import '../models/product_model.dart';
-import '../services/product_service.dart';
 
 class ProductProvider with ChangeNotifier {
-  final ProductService _productService = ProductService();
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<ProductModel> _products = [];
   List<ProductModel> _filteredProducts = [];
   ProductModel? _selectedProduct;
   bool _isLoading = false;
   bool _isLoadingDetails = false;
   String _error = '';
-  StreamSubscription<List<ProductModel>>? _productsSubscription;
+  StreamSubscription<QuerySnapshot>? _productsSubscription;
 
   // Getters
   List<ProductModel> get products => _products;
@@ -39,28 +41,36 @@ class ProductProvider with ChangeNotifier {
     });
 
     _productsSubscription?.cancel();
-    _productsSubscription = _productService.getAllProducts().listen(
-      (products) {
-        _products = products;
-        _filteredProducts = products;
-        _error = '';
-        _isLoading = false;
+    _productsSubscription = _firestore
+        .collection('products')
+        .snapshots()
+        .listen(
+          (querySnapshot) {
+            _products = querySnapshot.docs.map((doc) {
+              final data = doc.data();
+              data['productId'] =
+                  doc.id; // Use productId as expected by the model
+              return ProductModel.fromJson(data);
+            }).toList();
+            _filteredProducts = _products;
+            _error = '';
+            _isLoading = false;
 
-        // Use post frame callback to avoid setState during build
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          notifyListeners();
-        });
-      },
-      onError: (error) {
-        _error = error.toString();
-        _isLoading = false;
+            // Use post frame callback to avoid setState during build
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              notifyListeners();
+            });
+          },
+          onError: (error) {
+            _error = error.toString();
+            _isLoading = false;
 
-        // Use post frame callback to avoid setState during build
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          notifyListeners();
-        });
-      },
-    );
+            // Use post frame callback to avoid setState during build
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              notifyListeners();
+            });
+          },
+        );
   }
 
   // Get product details by ID
@@ -92,9 +102,16 @@ class ProductProvider with ChangeNotifier {
         return existingProduct;
       }
 
-      // If not found locally, fetch from service
-      final product = await _productService.getProductById(productId);
-      _selectedProduct = product;
+      // If not found locally, fetch from Firestore
+      final doc = await _firestore.collection('products').doc(productId).get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        data['productId'] = doc.id;
+        final product = ProductModel.fromJson(data);
+        _selectedProduct = product;
+      } else {
+        _selectedProduct = null;
+      }
       _isLoadingDetails = false;
 
       // Use post frame callback to avoid setState during build
@@ -102,7 +119,7 @@ class ProductProvider with ChangeNotifier {
         notifyListeners();
       });
 
-      return product;
+      return _selectedProduct;
     } catch (e) {
       _error = e.toString();
       _isLoadingDetails = false;
@@ -141,7 +158,7 @@ class ProductProvider with ChangeNotifier {
     super.dispose();
   }
 
-  // Create product
+  // Create product (admin function - implement as needed)
   Future<void> createProduct({
     required String name,
     required String description,
@@ -153,15 +170,48 @@ class ProductProvider with ChangeNotifier {
   }) async {
     try {
       _setLoading(true);
-      await _productService.createProduct(
-        name: name,
-        description: description,
-        price: price,
-        category: category,
-        quantity: quantity,
-        imageFile: imageFile,
-        webImage: webImage,
-      );
+
+      // Check if user is authenticated
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception(
+          'You must be logged in to create products. Please sign in first.',
+        );
+      }
+
+      // Upload image to Cloudinary if provided
+      String imageUrl = '';
+      if (imageFile != null || webImage != null) {
+        if (!CloudinaryService.isConfigured()) {
+          throw Exception(
+            'Cloudinary is not configured. Please set up your Cloudinary credentials in cloudinary_config.dart',
+          );
+        }
+        imageUrl =
+            await CloudinaryService.uploadImage(
+              imageFile: imageFile,
+              webImage: webImage,
+              fileName:
+                  '${name.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}',
+            ) ??
+            '';
+      }
+
+      // Create product data
+      final productData = {
+        'productId': DateTime.now().millisecondsSinceEpoch.toString(),
+        'productName': name,
+        'productDescription': description,
+        'productPrice': price,
+        'productCategory': category,
+        'productQuantity': quantity,
+        'productImage': imageUrl,
+        'createdAt': DateTime.now().toIso8601String(),
+      };
+
+      // Add to Firestore
+      await _firestore.collection('products').add(productData);
+
       _setLoading(false);
     } catch (e) {
       _handleError(e);
@@ -185,7 +235,7 @@ class ProductProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // Update product
+  // Update product (admin function - implement as needed)
   Future<void> updateProduct(
     ProductModel product, {
     File? newImageFile,
@@ -193,15 +243,55 @@ class ProductProvider with ChangeNotifier {
   }) async {
     try {
       _setLoading(true);
-      await _productService.updateProduct(
-        product,
-        newImageFile: newImageFile,
-        newWebImage: newWebImage,
+
+      // Check if user is authenticated
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception(
+          'You must be logged in to update products. Please sign in first.',
+        );
+      }
+
+      String imageUrl = product.productImage;
+
+      // Upload new image if provided
+      if (newImageFile != null || newWebImage != null) {
+        if (!CloudinaryService.isConfigured()) {
+          throw Exception(
+            'Cloudinary is not configured. Please set up your Cloudinary credentials in cloudinary_config.dart',
+          );
+        }
+        imageUrl =
+            await CloudinaryService.uploadImage(
+              imageFile: newImageFile,
+              webImage: newWebImage,
+              fileName:
+                  '${product.productName.replaceAll(' ', '_')}_${DateTime.now().millisecondsSinceEpoch}',
+            ) ??
+            product.productImage;
+      }
+
+      // Create updated product data
+      final updatedProduct = ProductModel(
+        productId: product.productId,
+        productName: product.productName,
+        productDescription: product.productDescription,
+        productPrice: product.productPrice,
+        productCategory: product.productCategory,
+        productQuantity: product.productQuantity,
+        productImage: imageUrl,
+        createdAt: product.createdAt,
       );
+
+      // Update product in Firestore
+      await _firestore
+          .collection('products')
+          .doc(product.productId)
+          .update(updatedProduct.toJson());
 
       // Update selected product if it's the same one being updated
       if (_selectedProduct?.productId == product.productId) {
-        _selectedProduct = product;
+        _selectedProduct = updatedProduct;
       }
 
       _setLoading(false);
@@ -211,11 +301,13 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
-  // Delete product
+  // Delete product (admin function - implement as needed)
   Future<void> deleteProduct(String productId) async {
     try {
       _setLoading(true);
-      await _productService.deleteProduct(productId);
+
+      // Delete from Firestore
+      await _firestore.collection('products').doc(productId).delete();
 
       // Clear selected product if it's the deleted one
       if (_selectedProduct?.productId == productId) {
@@ -251,7 +343,18 @@ class ProductProvider with ChangeNotifier {
 
     try {
       _setLoading(true);
-      _filteredProducts = await _productService.searchProducts(query);
+
+      // Search products locally (or implement Firestore query as needed)
+      _filteredProducts = _products.where((product) {
+        return product.productName.toLowerCase().contains(
+              query.toLowerCase(),
+            ) ||
+            product.productDescription.toLowerCase().contains(
+              query.toLowerCase(),
+            ) ||
+            product.productCategory.toLowerCase().contains(query.toLowerCase());
+      }).toList();
+
       _setLoading(false);
     } catch (e) {
       _handleError(e);

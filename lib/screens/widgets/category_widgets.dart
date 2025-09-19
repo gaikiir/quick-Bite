@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:quick_bite/screens/models/categoryModel.dart';
+import 'package:quick_bite/screens/models/category_model.dart';
 import 'package:quick_bite/screens/provider/category_provider.dart';
 
 class ModernCategoryCard extends StatelessWidget {

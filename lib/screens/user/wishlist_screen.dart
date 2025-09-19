@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/product_model.dart';
 import '../provider/product_provider.dart';
 import '../provider/wishlist_provider.dart';
+import '../user/product_details_screen.dart';
 import '../widgets/wishlist_widgets.dart';
 
 class WishlistScreen extends StatefulWidget {
@@ -229,7 +230,11 @@ class _WishlistScreenState extends State<WishlistScreen> {
     );
 
     if (product.productId.isNotEmpty) {
-      Navigator.pushNamed(context, '/product-details', arguments: product);
+      Navigator.pushNamed(
+        context,
+        ProductDetailsScreen.routeName,
+        arguments: product,
+      );
     } else {
       // If product not found in local data, show error
       WidgetsBinding.instance.addPostFrameCallback((_) {

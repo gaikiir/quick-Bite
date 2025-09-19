@@ -1,403 +1,326 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_iconly/flutter_iconly.dart';
 import 'package:provider/provider.dart';
+import 'package:quick_bite/screens/models/category_model.dart';
 import 'package:quick_bite/screens/provider/category_provider.dart';
 import 'package:quick_bite/screens/user/category_products_screen.dart';
-import 'package:quick_bite/screens/widgets/category_widgets.dart';
 
 class CategoryScreen extends StatefulWidget {
+  static const String routeName = '/category';
+
   const CategoryScreen({super.key});
 
   @override
   State<CategoryScreen> createState() => _CategoryScreenState();
 }
 
-class _CategoryScreenState extends State<CategoryScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  String _searchQuery = '';
-  bool _isGridView = true;
-
+class _CategoryScreenState extends State<CategoryScreen> {
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
-    _animationController.forward();
-
-    // Initialize categories stream when screen initializes
+    // Set default images for categories on screen load
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // The provider already initializes the stream in its constructor
-      // but we can trigger sample data if no categories exist
-      final provider = context.read<CategoryProvider>();
-      if (provider.categories.isEmpty && !provider.isLoading) {
-        provider.initializeSampleCategories();
-      }
+      context.read<CategoryProvider>().setDefaultCategoryImages();
     });
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: CustomScrollView(
-          slivers: [
-            _buildAppBar(),
-            _buildSearchSection(),
-            _buildViewToggle(),
-            _buildCategoriesSection(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAppBar() {
-    return SliverAppBar(
-      expandedHeight: 120,
-      floating: false,
-      pinned: true,
-      elevation: 0,
-      backgroundColor: Colors.transparent,
-      flexibleSpace: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFF6B6B), Color(0xFFFFE66D)],
-          ),
-        ),
-        child: FlexibleSpaceBar(
-          title: const Text(
-            'Categories',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 24,
-            ),
-          ),
-          centerTitle: true,
-          background: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFF6B6B), Color(0xFFFFE66D)],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchSection() {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.2),
-                spreadRadius: 2,
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: TextField(
-            onChanged: (value) {
-              setState(() {
-                _searchQuery = value;
-              });
+      appBar: AppBar(
+        title: const Text('Categories'),
+        backgroundColor: const Color(0xFFFF6B6B),
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              context.read<CategoryProvider>().refreshCategories();
             },
-            decoration: InputDecoration(
-              hintText: 'Search categories...',
-              hintStyle: TextStyle(color: Colors.grey[600]),
-              prefixIcon: Icon(IconlyLight.search, color: Colors.grey[600]),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        setState(() {
-                          _searchQuery = '';
-                        });
-                      },
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: Colors.grey[50],
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 16,
-              ),
-            ),
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildViewToggle() {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Browse Categories',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[800],
-              ),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildViewToggleButton(
-                    icon: Icons.grid_view,
-                    isSelected: _isGridView,
-                    onTap: () => setState(() => _isGridView = true),
+          IconButton(
+            icon: const Icon(Icons.cleaning_services),
+            tooltip: 'Force Reload',
+            onPressed: () {
+              context.read<CategoryProvider>().forceReloadCategories();
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_sweep),
+            tooltip: 'Cleanup Duplicates',
+            onPressed: () async {
+              final shouldCleanup = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Cleanup Duplicate Categories'),
+                  content: const Text(
+                    'This will remove duplicate categories from the database. '
+                    'Only the most recent version of each category will be kept. '
+                    'This action cannot be undone. Continue?',
                   ),
-                  _buildViewToggleButton(
-                    icon: Icons.view_list,
-                    isSelected: !_isGridView,
-                    onTap: () => setState(() => _isGridView = false),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      child: const Text('Cleanup'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (shouldCleanup == true) {
+                try {
+                  await context
+                      .read<CategoryProvider>()
+                      .cleanupDuplicateCategories();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Duplicate categories cleaned up successfully',
+                        ),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to cleanup duplicates: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              }
+            },
+          ),
+        ],
+      ),
+      body: Consumer<CategoryProvider>(
+        builder: (context, categoryProvider, child) {
+          // Loading state
+          if (categoryProvider.isLoadingCategories) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFFFF6B6B)),
+            );
+          }
+
+          // Error state
+          if (categoryProvider.categoriesError.isNotEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Failed to load categories',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    categoryProvider.categoriesError,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      categoryProvider.refreshCategories();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF6B6B),
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Try Again'),
                   ),
                 ],
               ),
+            );
+          }
+
+          final categories = categoryProvider.categories;
+
+          // Empty state
+          if (categories.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.category_outlined,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No categories available',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Categories will appear here once added by admin',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      categoryProvider.refreshCategories();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFF6B6B),
+                      foregroundColor: Colors.white,
+                    ),
+                    child: const Text('Refresh'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          // Dynamic categories grid
+          return RefreshIndicator(
+            onRefresh: () => categoryProvider.refreshCategories(),
+            color: const Color(0xFFFF6B6B),
+            child: GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 0.8,
+              ),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                final category = categories[index];
+                return _buildDynamicCategoryCard(context, category);
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDynamicCategoryCard(
+    BuildContext context,
+    CategoryModel category,
+  ) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () {
+          Navigator.pushNamed(
+            context,
+            CategoryProductsScreen.routeName,
+            arguments: category,
+          );
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Dynamic category image
+            Expanded(
+              flex: 3,
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
+                child: Image.network(
+                  category.categoryImage,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      color: Colors.grey[200],
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                          color: Color(0xFFFF6B6B),
+                        ),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey[200],
+                      child: const Icon(
+                        Icons.category,
+                        size: 48,
+                        color: Colors.grey,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            // Dynamic category info
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      category.categoryName,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Flexible(
+                      child: Text(
+                        category.categoryDescription,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: category.isAvailable
+                            ? Colors.green.withOpacity(0.1)
+                            : Colors.red.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        category.isAvailable ? 'Available' : 'Unavailable',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: category.isAvailable
+                              ? Colors.green
+                              : Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildViewToggleButton({
-    required IconData icon,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFF6B6B) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          icon,
-          color: isSelected ? Colors.white : Colors.grey[600],
-          size: 20,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCategoriesSection() {
-    return Consumer<CategoryProvider>(
-      builder: (context, categoryProvider, child) {
-        if (categoryProvider.isLoading) {
-          return const SliverToBoxAdapter(
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.all(32.0),
-                child: CircularProgressIndicator(color: Color(0xFFFF6B6B)),
-              ),
-            ),
-          );
-        }
-
-        if (categoryProvider.error.isNotEmpty) {
-          return SliverToBoxAdapter(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error loading categories',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      categoryProvider.error,
-                      style: TextStyle(color: Colors.grey[500]),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        // Retry by reinitializing the stream
-                        final provider = context.read<CategoryProvider>();
-                        provider.initCategoriesStream();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFFF6B6B),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-
-        var filteredCategories = categoryProvider.categories.where((category) {
-          return category.categoryName.toLowerCase().contains(
-            _searchQuery.toLowerCase(),
-          );
-        }).toList();
-
-        if (filteredCategories.isEmpty) {
-          return SliverToBoxAdapter(
-            child: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(32.0),
-                child: Column(
-                  children: [
-                    Icon(
-                      _searchQuery.isNotEmpty
-                          ? Icons.search_off
-                          : Icons.category_outlined,
-                      size: 64,
-                      color: Colors.grey[400],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _searchQuery.isNotEmpty
-                          ? 'No categories found'
-                          : 'No categories available',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      _searchQuery.isNotEmpty
-                          ? 'Try searching with different keywords'
-                          : 'Categories will appear here when added',
-                      style: TextStyle(color: Colors.grey[500]),
-                      textAlign: TextAlign.center,
-                    ),
-                    if (categoryProvider.categories.isEmpty) ...[
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () =>
-                            categoryProvider.initializeSampleCategories(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFF6B6B),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: const Text('Add Sample Categories'),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
-
-        return _isGridView
-            ? SliverPadding(
-                padding: const EdgeInsets.all(16.0),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.85,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                  ),
-                  delegate: SliverChildBuilderDelegate((context, index) {
-                    final category = filteredCategories[index];
-                    return ModernCategoryCard(
-                      category: category,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                CategoryProductsScreen(category: category),
-                          ),
-                        );
-                      },
-                    );
-                  }, childCount: filteredCategories.length),
-                ),
-              )
-            : SliverList(
-                delegate: SliverChildBuilderDelegate((context, index) {
-                  final category = filteredCategories[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0,
-                      vertical: 8.0,
-                    ),
-                    child: ModernCategoryCard(
-                      category: category,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                CategoryProductsScreen(category: category),
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                }, childCount: filteredCategories.length),
-              );
-      },
     );
   }
 }

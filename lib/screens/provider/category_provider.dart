@@ -2,394 +2,622 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:quick_bite/screens/models/categoryModel.dart';
+import 'package:quick_bite/screens/models/category_model.dart';
 import 'package:quick_bite/screens/models/product_model.dart';
 
-class CategoryProvider with ChangeNotifier {
-  List<CategoryModel> _categories = [];
-  bool _isLoading = false;
-  String _error = '';
-  String _selectedCategory = '';
+class CategoryProvider extends ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  StreamSubscription? _categoriesSubscription;
-  StreamSubscription? _categoryProductsSubscription;
 
-  // Products for selected category
-  List<ProductModel> _categoryProducts = [];
+  // Dynamic categories from Firestore
+  List<CategoryModel> _categories = [];
+  List<ProductModel> _products = [];
+
+  // Loading states
+  bool _isLoadingCategories = false;
   bool _isLoadingProducts = false;
+
+  // Error states
+  String _categoriesError = '';
   String _productsError = '';
 
-  CategoryProvider() {
-    debugPrint('CategoryProvider initialized');
-    // Removed auto-initialization to prevent double initialization
-  }
+  // Stream subscriptions for proper cleanup
+  StreamSubscription<QuerySnapshot>? _categoriesSubscription;
+  StreamSubscription<QuerySnapshot>? _productsSubscription;
+
+  // Disposal flag
+  bool _isDisposed = false;
 
   // Getters
-  List<CategoryModel> get categories => _categories;
-  bool get isLoading => _isLoading;
-  String get error => _error;
-  String get selectedCategory => _selectedCategory;
-  int get categoriesCount => _categories.length;
-
-  // Products getters
-  List<ProductModel> get categoryProducts => _categoryProducts;
+  List<CategoryModel> get categories => _categories
+    ..sort(
+      (a, b) => b.createdAt.compareTo(a.createdAt),
+    ); // Always return sorted by newest first
+  List<ProductModel> get products => _products;
+  bool get isLoadingCategories => _isLoadingCategories;
   bool get isLoadingProducts => _isLoadingProducts;
+  String get categoriesError => _categoriesError;
   String get productsError => _productsError;
 
-  // Check if products are already loaded for a category (kept for compatibility)
-  bool hasProductsForCategory(String categoryName) {
-    return _selectedCategory == categoryName && _categoryProducts.isNotEmpty;
-  }
-
-  // Get available categories (only active ones)
+  // Computed getters for backward compatibility
+  bool get isLoading => _isLoadingCategories;
+  String get error => _categoriesError;
   List<CategoryModel> get availableCategories =>
-      _categories.where((category) => category.isAvailable).toList();
+      _categories.where((cat) => cat.isAvailable).toList()..sort(
+        (a, b) => b.createdAt.compareTo(a.createdAt),
+      ); // Sort by newest first
 
-  // Subscribe to products for a specific category (real-time updates)
-  Future<void> fetchProductsForCategory(String categoryName) async {
-    _subscribeToCategoryProducts(categoryName);
-  }
+  // Initialize dynamic categories stream from Firestore
+  void initCategoriesStream() {
+    if (_isDisposed || _categoriesSubscription != null) {
+      debugPrint('initCategoriesStream: Already initialized or disposed');
+      return;
+    }
 
-  void _subscribeToCategoryProducts(String categoryName) {
-    _categoryProductsSubscription?.cancel();
-    _isLoadingProducts = true;
-    _productsError = '';
-    _selectedCategory = categoryName;
-    _categoryProducts = [];
+    debugPrint('initCategoriesStream: Initializing categories stream');
+    // Cancel existing subscription if any
+    _categoriesSubscription?.cancel();
 
-    // Use post frame callback to avoid setState during build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
-    });
+    _isLoadingCategories = true;
+    _categoriesError = '';
+    if (!_isDisposed) notifyListeners();
 
-    debugPrint('🔍 Subscribing to products for category: $categoryName');
-
-    _categoryProductsSubscription = _firestore
-        .collection('products')
-        .where('productCategory', isEqualTo: categoryName)
-        .snapshots()
-        .listen(
-          (snapshot) {
-            _categoryProducts = snapshot.docs
-                .map((doc) => ProductModel.fromJson(doc.data()))
-                .toList();
-            _isLoadingProducts = false;
-            _productsError = '';
-            debugPrint(
-              '✅ Live products: ${_categoryProducts.length} for $categoryName',
-            );
-
-            // Use post frame callback to avoid setState during build
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              notifyListeners();
-            });
-          },
-          onError: (e) {
-            _productsError = 'Failed to load products: $e';
-            _isLoadingProducts = false;
-            debugPrint('❌ Error subscribing products for category: $e');
-
-            // Use post frame callback to avoid setState during build
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              notifyListeners();
-            });
-          },
-        );
-  }
-
-  // (Sample data methods removed - use Firebase console or admin panel to add data)
-
-  // Get products count for a category
-  Future<int> getProductsCountForCategory(String categoryName) async {
     try {
-      final querySnapshot = await _firestore
-          .collection('products')
-          .where('productCategory', isEqualTo: categoryName)
-          .get();
+      _categoriesSubscription = _firestore
+          .collection('categories')
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .listen(
+            (snapshot) {
+              if (_isDisposed) return;
 
-      return querySnapshot.docs.length;
-    } catch (e) {
-      debugPrint('Error getting products count for category: $e');
-      return 0;
+              try {
+                final parsedCategories = snapshot.docs
+                    .map((doc) {
+                      try {
+                        return CategoryModel.fromJson(doc.data());
+                      } catch (e) {
+                        // Log the error and skip this document
+                        debugPrint(
+                          'Error parsing category document ${doc.id}: $e',
+                        );
+                        return null;
+                      }
+                    })
+                    .where((category) => category != null)
+                    .cast<CategoryModel>()
+                    .toList();
+
+                // Remove duplicates based on categoryId
+                final uniqueCategories = <String, CategoryModel>{};
+                final nameDuplicates = <String, List<CategoryModel>>{};
+
+                for (final category in parsedCategories) {
+                  // Check for name duplicates
+                  if (!nameDuplicates.containsKey(category.categoryName)) {
+                    nameDuplicates[category.categoryName] = [];
+                  }
+                  nameDuplicates[category.categoryName]!.add(category);
+
+                  // Deduplicate by ID (keep the most recent)
+                  if (uniqueCategories.containsKey(category.categoryId)) {
+                    debugPrint(
+                      'Duplicate category ID found: ${category.categoryName} (ID: ${category.categoryId})',
+                    );
+                    // Keep the one with the most recent createdAt
+                    final existing = uniqueCategories[category.categoryId]!;
+                    if (category.createdAt.isAfter(existing.createdAt)) {
+                      uniqueCategories[category.categoryId] = category;
+                    }
+                  } else {
+                    uniqueCategories[category.categoryId] = category;
+                  }
+                }
+
+                // Log name duplicates
+                for (final entry in nameDuplicates.entries) {
+                  if (entry.value.length > 1) {
+                    debugPrint(
+                      'Categories with same name "${entry.key}": ${entry.value.length} instances',
+                    );
+                    for (final cat in entry.value) {
+                      debugPrint(
+                        '  - ID: ${cat.categoryId}, Created: ${cat.createdAt}',
+                      );
+                    }
+                  }
+                }
+
+                _categories = uniqueCategories.values.toList();
+                _isLoadingCategories = false;
+                _categoriesError = '';
+                if (!_isDisposed) notifyListeners();
+              } catch (parseError) {
+                _categoriesError = 'Error parsing category data: $parseError';
+                _isLoadingCategories = false;
+                if (!_isDisposed) notifyListeners();
+              }
+            },
+            onError: (error) {
+              if (_isDisposed) return;
+
+              _categoriesError = 'Failed to load categories: $error';
+              _isLoadingCategories = false;
+              if (!_isDisposed) notifyListeners();
+            },
+            onDone: () {
+              // Stream completed
+            },
+          );
+    } catch (error) {
+      if (_isDisposed) return;
+
+      _categoriesError = 'Failed to initialize categories: $error';
+      _isLoadingCategories = false;
+      if (!_isDisposed) notifyListeners();
     }
   }
 
-  // Refresh products for a specific category (re-subscribe)
-  Future<void> refreshProductsForCategory(String categoryName) async {
-    debugPrint('🔄 Re-subscribing products for category: $categoryName');
-    _subscribeToCategoryProducts(categoryName);
-  }
+  // Load dynamic products for a specific category from Firestore
+  void getProductsForCategory(String categoryId) {
+    if (_isDisposed) return;
 
-  // Clear category products
-  void clearCategoryProducts() {
-    _categoryProducts = [];
-    _selectedCategory = '';
+    // Find the category name from the categoryId
+    final category = _categories.firstWhere(
+      (cat) => cat.categoryId == categoryId,
+      orElse: () => CategoryModel(
+        categoryId: categoryId,
+        categoryName: '',
+        categoryDescription: '',
+        categoryImage: '',
+        isAvailable: true,
+      ),
+    );
+
+    final categoryName = category.categoryName;
+    if (categoryName.isEmpty) {
+      _productsError = 'Category not found';
+      _isLoadingProducts = false;
+      if (!_isDisposed) notifyListeners();
+      return;
+    }
+
+    // Cancel existing subscription
+    _productsSubscription?.cancel();
+
+    _isLoadingProducts = true;
     _productsError = '';
-    _categoryProductsSubscription?.cancel();
+    if (!_isDisposed) notifyListeners();
 
-    // Use post frame callback to avoid setState during build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
-    });
+    try {
+      _productsSubscription = _firestore
+          .collection('products')
+          .where('productCategory', isEqualTo: categoryName)
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .listen(
+            (snapshot) {
+              if (_isDisposed) return;
+
+              try {
+                _products = snapshot.docs
+                    .map((doc) {
+                      try {
+                        return ProductModel.fromJson(doc.data());
+                      } catch (e) {
+                        // Log the error and skip this document
+                        debugPrint(
+                          'Error parsing product document ${doc.id}: $e',
+                        );
+                        return null;
+                      }
+                    })
+                    .where((product) => product != null)
+                    .cast<ProductModel>()
+                    .toList();
+                _isLoadingProducts = false;
+                _productsError = '';
+                if (!_isDisposed) notifyListeners();
+              } catch (parseError) {
+                _productsError = 'Error parsing product data: $parseError';
+                _isLoadingProducts = false;
+                if (!_isDisposed) notifyListeners();
+              }
+            },
+            onError: (error) {
+              if (_isDisposed) return;
+
+              final errorString = error.toString();
+
+              // If it's an index error, try fallback query without ordering
+              if (errorString.contains('requires an index') ||
+                  errorString.contains('failed-precondition')) {
+                _tryFallbackProductQuery(categoryName);
+              } else {
+                _productsError = 'Failed to load products: $error';
+                _isLoadingProducts = false;
+                if (!_isDisposed) notifyListeners();
+              }
+            },
+            onDone: () {
+              // Stream completed
+            },
+          );
+    } catch (error) {
+      if (_isDisposed) return;
+
+      _productsError = 'Failed to initialize products: $error';
+      _isLoadingProducts = false;
+      if (!_isDisposed) notifyListeners();
+    }
   }
 
-  // Set loading state
-  void _setLoading(bool loading) {
-    _isLoading = loading;
+  // Fallback query without ordering when index is not available
+  void _tryFallbackProductQuery(String categoryName) {
+    try {
+      _productsSubscription = _firestore
+          .collection('products')
+          .where('productCategory', isEqualTo: categoryName)
+          .snapshots()
+          .listen(
+            (snapshot) {
+              if (_isDisposed) return;
 
-    // Use post frame callback to avoid setState during build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
-    });
+              try {
+                final products = snapshot.docs
+                    .map((doc) {
+                      try {
+                        return ProductModel.fromJson(doc.data());
+                      } catch (e) {
+                        debugPrint(
+                          'Error parsing product document ${doc.id}: $e',
+                        );
+                        return null;
+                      }
+                    })
+                    .where((product) => product != null)
+                    .cast<ProductModel>()
+                    .toList();
+
+                // Sort in memory since we can't order in query
+                products.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+                _products = products;
+                _isLoadingProducts = false;
+                _productsError = '';
+                if (!_isDisposed) notifyListeners();
+              } catch (parseError) {
+                _productsError = 'Error parsing product data: $parseError';
+                _isLoadingProducts = false;
+                if (!_isDisposed) notifyListeners();
+              }
+            },
+            onError: (error) {
+              if (_isDisposed) return;
+
+              _productsError = 'Failed to load products: $error';
+              _isLoadingProducts = false;
+              if (!_isDisposed) notifyListeners();
+            },
+          );
+    } catch (error) {
+      if (_isDisposed) return;
+
+      _productsError = 'Failed to initialize fallback products query: $error';
+      _isLoadingProducts = false;
+      if (!_isDisposed) notifyListeners();
+    }
   }
 
-  // Handle errors
-  void _handleError(Object error) {
-    _error = error.toString();
-    _isLoading = false;
-    debugPrint('CategoryProvider Error: $_error');
+  // Clean up duplicate categories in Firestore (admin function)
+  Future<void> cleanupDuplicateCategories() async {
+    try {
+      debugPrint('Starting duplicate category cleanup...');
 
-    // Use post frame callback to avoid setState during build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
-    });
-  }
+      final snapshot = await _firestore
+          .collection('categories')
+          .orderBy('createdAt', descending: true)
+          .get();
 
-  // Initialize categories stream
-  void initCategoriesStream() {
-    _categoriesSubscription?.cancel();
-    _categoriesSubscription = _firestore
-        .collection('categories')
-        .orderBy('categoryName')
-        .snapshots()
-        .listen((snapshot) {
-          _categories = snapshot.docs
-              .map((doc) => CategoryModel.fromMap(doc.data()))
-              .toList();
-          _error = '';
-          debugPrint('Categories loaded: ${_categories.length}');
+      final categoriesByName = <String, List<QueryDocumentSnapshot>>{};
+      final categoriesById = <String, QueryDocumentSnapshot>{};
 
-          // Use post frame callback to avoid setState during build
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            notifyListeners();
+      // Group by name and collect all instances
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final categoryName = data['categoryName']?.toString() ?? '';
+        final categoryId = data['categoryId']?.toString() ?? '';
+
+        if (!categoriesByName.containsKey(categoryName)) {
+          categoriesByName[categoryName] = [];
+        }
+        categoriesByName[categoryName]!.add(doc);
+
+        categoriesById[categoryId] = doc;
+      }
+
+      // Delete duplicates, keeping only the most recent one for each name
+      int deletedCount = 0;
+      for (final entry in categoriesByName.entries) {
+        final categoryName = entry.key;
+        final docs = entry.value;
+
+        if (docs.length > 1) {
+          debugPrint(
+            'Found ${docs.length} duplicates for category: $categoryName',
+          );
+
+          // Sort by createdAt (most recent first)
+          docs.sort((a, b) {
+            final aData = a.data() as Map<String, dynamic>?;
+            final bData = b.data() as Map<String, dynamic>?;
+            final aTime = aData != null
+                ? DateTime.tryParse(aData['createdAt']?.toString() ?? '') ??
+                      DateTime.now()
+                : DateTime.now();
+            final bTime = bData != null
+                ? DateTime.tryParse(bData['createdAt']?.toString() ?? '') ??
+                      DateTime.now()
+                : DateTime.now();
+            return bTime.compareTo(aTime);
           });
-        }, onError: _handleError);
+
+          // Keep the first (most recent), delete the rest
+          for (int i = 1; i < docs.length; i++) {
+            await docs[i].reference.delete();
+            deletedCount++;
+            debugPrint('Deleted duplicate category: ${docs[i].id}');
+          }
+        }
+      }
+
+      debugPrint(
+        'Cleanup completed. Deleted $deletedCount duplicate categories.',
+      );
+
+      // Refresh categories after cleanup
+      await refreshCategories();
+    } catch (error) {
+      debugPrint('Error during category cleanup: $error');
+      throw Exception('Failed to cleanup duplicate categories: $error');
+    }
   }
 
-  // Create a new category
+  // Clear products when navigating away
+  void clearProducts() {
+    if (_isDisposed) return;
+
+    _productsSubscription?.cancel();
+    _productsSubscription = null;
+    _products = [];
+    _productsError = '';
+    _isLoadingProducts = false;
+    // Don't notify listeners during cleanup
+  }
+
+  // Admin: Create new dynamic category
   Future<void> createCategory({
     required String categoryName,
     required String categoryImage,
-    String? description,
+    required String description,
   }) async {
+    if (_isDisposed) return;
+
     try {
-      _setLoading(true);
-
-      final categoryId = _firestore.collection('categories').doc().id;
-      final now = DateTime.now();
-
+      final docRef = _firestore.collection('categories').doc();
       final category = CategoryModel(
-        categoryId: categoryId,
+        categoryId: docRef.id,
         categoryName: categoryName,
         categoryImage: categoryImage,
-        description: description,
+        categoryDescription: description,
         isAvailable: true,
-        createdAt: now,
-        updatedAt: now,
       );
 
-      await _firestore
-          .collection('categories')
-          .doc(categoryId)
-          .set(category.toMap());
-
-      debugPrint('Category created: $categoryName');
-      _error = '';
-    } catch (e) {
-      _handleError(e);
-      rethrow;
-    } finally {
-      _setLoading(false);
+      await docRef.set(category.toJson());
+      // Categories will be updated automatically via stream
+    } catch (error) {
+      throw Exception('Failed to create category: $error');
     }
   }
 
-  // Update category
-  Future<void> updateCategory(CategoryModel category) async {
-    try {
-      _setLoading(true);
-
-      final updatedCategory = category.copyWith(updatedAt: DateTime.now());
-
-      await _firestore
-          .collection('categories')
-          .doc(category.categoryId)
-          .update(updatedCategory.toMap());
-
-      debugPrint('Category updated: ${category.categoryName}');
-      _error = '';
-    } catch (e) {
-      _handleError(e);
-      rethrow;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  // Delete category
+  // Admin: Delete dynamic category
   Future<void> deleteCategory(String categoryId) async {
-    try {
-      _setLoading(true);
+    if (_isDisposed) return;
 
+    try {
       await _firestore.collection('categories').doc(categoryId).delete();
-
-      debugPrint('Category deleted: $categoryId');
-      _error = '';
-    } catch (e) {
-      _handleError(e);
-      rethrow;
-    } finally {
-      _setLoading(false);
+      // Categories will be updated automatically via stream
+    } catch (error) {
+      throw Exception('Failed to delete category: $error');
     }
-  }
-
-  // Toggle category availability
-  Future<void> toggleCategoryAvailability(String categoryId) async {
-    try {
-      final category = _categories.firstWhere(
-        (cat) => cat.categoryId == categoryId,
-      );
-
-      final updatedCategory = category.copyWith(
-        isAvailable: !category.isAvailable,
-        updatedAt: DateTime.now(),
-      );
-
-      await updateCategory(updatedCategory);
-    } catch (e) {
-      _handleError(e);
-      rethrow;
-    }
-  }
-
-  // Set selected category
-  void setSelectedCategory(String categoryName) {
-    _selectedCategory = categoryName;
-    debugPrint('Selected category: $categoryName');
-
-    // Use post frame callback to avoid setState during build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
-    });
-  }
-
-  // Clear selected category
-  void clearSelectedCategory() {
-    _selectedCategory = '';
-    debugPrint('Category selection cleared');
-
-    // Use post frame callback to avoid setState during build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
-    });
   }
 
   // Get category by ID
   CategoryModel? getCategoryById(String categoryId) {
     try {
-      return _categories.firstWhere(
-        (category) => category.categoryId == categoryId,
-      );
+      return _categories.firstWhere((cat) => cat.categoryId == categoryId);
     } catch (e) {
       return null;
     }
   }
 
-  // Get category by name
-  CategoryModel? getCategoryByName(String categoryName) {
+  // Refresh categories (useful for manual refresh)
+  Future<void> refreshCategories() async {
+    if (_isDisposed) return;
+
     try {
-      return _categories.firstWhere(
-        (category) =>
-            category.categoryName.toLowerCase() == categoryName.toLowerCase(),
-      );
-    } catch (e) {
-      return null;
-    }
-  }
+      _isLoadingCategories = true;
+      _categoriesError = '';
+      if (!_isDisposed) notifyListeners();
 
-  // Get category names for dropdown
-  List<String> get categoryNames =>
-      _categories.map((category) => category.categoryName).toList();
+      final snapshot = await _firestore
+          .collection('categories')
+          .orderBy('createdAt', descending: true)
+          .get();
 
-  // Clear errors
-  void clearError() {
-    _error = '';
+      if (_isDisposed) return;
 
-    // Use post frame callback to avoid setState during build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      notifyListeners();
-    });
-  }
+      final parsedCategories = snapshot.docs
+          .map((doc) {
+            try {
+              return CategoryModel.fromJson(doc.data());
+            } catch (e) {
+              // Log the error and skip this document
+              debugPrint('Error parsing category document ${doc.id}: $e');
+              return null;
+            }
+          })
+          .where((category) => category != null)
+          .cast<CategoryModel>()
+          .toList();
 
-  // Initialize with sample data (for development only - use Firebase console for production)
-  Future<void> initializeSampleCategories() async {
-    try {
-      final sampleCategories = [
-        {
-          'categoryName': 'Fast Food',
-          'categoryImage':
-              'https://images.unsplash.com/photo-1571091718767-18b5b1457add?w=500',
-          'description': 'Quick and delicious fast food options',
-        },
-        {
-          'categoryName': 'Pizza',
-          'categoryImage':
-              'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=500',
-          'description': 'Fresh pizzas with amazing toppings',
-        },
-        {
-          'categoryName': 'Desserts',
-          'categoryImage':
-              'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=500',
-          'description': 'Sweet treats and desserts',
-        },
-        {
-          'categoryName': 'Beverages',
-          'categoryImage':
-              'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500',
-          'description': 'Refreshing drinks and beverages',
-        },
-        {
-          'categoryName': 'Healthy',
-          'categoryImage':
-              'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=500',
-          'description': 'Nutritious and healthy food options',
-        },
-        {
-          'categoryName': 'Asian',
-          'categoryImage':
-              'https://images.unsplash.com/photo-1563379091339-03246963d4d6?w=500',
-          'description': 'Authentic Asian cuisine',
-        },
-      ];
+      // Remove duplicates based on categoryId
+      final uniqueCategories = <String, CategoryModel>{};
+      final nameDuplicates = <String, List<CategoryModel>>{};
 
-      for (final categoryData in sampleCategories) {
-        await createCategory(
-          categoryName: categoryData['categoryName']!,
-          categoryImage: categoryData['categoryImage']!,
-          description: categoryData['description'],
-        );
+      for (final category in parsedCategories) {
+        // Check for name duplicates
+        if (!nameDuplicates.containsKey(category.categoryName)) {
+          nameDuplicates[category.categoryName] = [];
+        }
+        nameDuplicates[category.categoryName]!.add(category);
+
+        // Deduplicate by ID (keep the most recent)
+        if (uniqueCategories.containsKey(category.categoryId)) {
+          debugPrint(
+            'Duplicate category ID found in refresh: ${category.categoryName} (ID: ${category.categoryId})',
+          );
+          // Keep the one with the most recent createdAt
+          final existing = uniqueCategories[category.categoryId]!;
+          if (category.createdAt.isAfter(existing.createdAt)) {
+            uniqueCategories[category.categoryId] = category;
+          }
+        } else {
+          uniqueCategories[category.categoryId] = category;
+        }
       }
 
-      debugPrint('Sample categories initialized successfully');
-    } catch (e) {
-      debugPrint('Error initializing sample categories: $e');
+      // Log name duplicates
+      for (final entry in nameDuplicates.entries) {
+        if (entry.value.length > 1) {
+          debugPrint(
+            'Categories with same name "${entry.key}" in refresh: ${entry.value.length} instances',
+          );
+          for (final cat in entry.value) {
+            debugPrint('  - ID: ${cat.categoryId}, Created: ${cat.createdAt}');
+          }
+        }
+      }
+
+      _categories = uniqueCategories.values.toList();
+      debugPrint(
+        'Refreshed ${parsedCategories.length} categories, showing ${_categories.length} unique categories',
+      );
+      _isLoadingCategories = false;
+      _categoriesError = '';
+      if (!_isDisposed) notifyListeners();
+    } catch (error) {
+      if (_isDisposed) return;
+
+      _categoriesError = 'Failed to refresh categories: $error';
+      _isLoadingCategories = false;
+      if (!_isDisposed) notifyListeners();
+    }
+  }
+
+  // Force clear and reload categories (for debugging)
+  Future<void> forceReloadCategories() async {
+    debugPrint(
+      'forceReloadCategories: Force clearing and reloading categories',
+    );
+
+    // Cancel existing subscription
+    _categoriesSubscription?.cancel();
+    _categoriesSubscription = null;
+    _categories = [];
+
+    // Reinitialize stream
+    initCategoriesStream();
+  }
+
+  /// Update category image URL
+  Future<void> updateCategoryImage(String categoryId, String imageUrl) async {
+    try {
+      await _firestore.collection('categories').doc(categoryId).update({
+        'categoryImage': imageUrl,
+      });
+      // Refresh categories to show updated image
+      await refreshCategories();
+    } catch (error) {
+      debugPrint('Error updating category image: $error');
+      rethrow;
+    }
+  }
+
+  /// Set default images for common categories
+  Future<void> setDefaultCategoryImages() async {
+    try {
+      final categories = await _firestore.collection('categories').get();
+
+      for (final doc in categories.docs) {
+        final data = doc.data();
+        final categoryName =
+            data['categoryName']?.toString().toLowerCase() ?? '';
+        final currentImage = data['categoryImage']?.toString() ?? '';
+
+        // Only update if no image is set
+        if (currentImage.isEmpty) {
+          String defaultImageUrl = '';
+
+          // Set default images based on category name
+          if (categoryName.contains('pizza') ||
+              categoryName.contains('pizzas')) {
+            defaultImageUrl =
+                'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop&crop=center';
+          } else if (categoryName.contains('asian') ||
+              categoryName.contains('asia')) {
+            defaultImageUrl =
+                'https://images.unsplash.com/photo-1565299624946-b28f40a0ca4b?w=400&h=300&fit=crop&crop=center';
+          } else if (categoryName.contains('dessert') ||
+              categoryName.contains('desserts')) {
+            defaultImageUrl =
+                'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400&h=300&fit=crop&crop=center';
+          } else if (categoryName.contains('beverage') ||
+              categoryName.contains('drink')) {
+            defaultImageUrl =
+                'https://images.unsplash.com/photo-1544145945-f90425340c7e?w=400&h=300&fit=crop&crop=center';
+          } else if (categoryName.contains('healthy') ||
+              categoryName.contains('salad')) {
+            defaultImageUrl =
+                'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=300&fit=crop&crop=center';
+          } else if (categoryName.contains('fast') ||
+              categoryName.contains('burger')) {
+            defaultImageUrl =
+                'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop&crop=center';
+          }
+
+          if (defaultImageUrl.isNotEmpty) {
+            await doc.reference.update({'categoryImage': defaultImageUrl});
+            debugPrint('Set default image for category: $categoryName');
+          }
+        }
+      }
+
+      // Refresh categories to show updated images
+      await refreshCategories();
+      debugPrint('Default category images set successfully');
+    } catch (error) {
+      debugPrint('Error setting default category images: $error');
+      rethrow;
     }
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
     _categoriesSubscription?.cancel();
-    _categoryProductsSubscription?.cancel();
+    _productsSubscription?.cancel();
+    _categoriesSubscription = null;
+    _productsSubscription = null;
     super.dispose();
   }
 }

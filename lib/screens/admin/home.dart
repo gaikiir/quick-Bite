@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:quick_bite/screens/admin/add_product_screen.dart';
 import 'package:quick_bite/screens/admin/category_management_screen.dart';
 import 'package:quick_bite/screens/admin/orders.dart';
-import 'package:quick_bite/screens/admin/users_screen.dart';
+// import 'package:quick_bite/screens/admin/users_screen.dart'; // Removed - implement as needed
 
 class AdminHomeScreen extends StatefulWidget {
   const AdminHomeScreen({super.key});
@@ -136,7 +136,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [theme.primaryColor, theme.primaryColor.withOpacity(0.8)],
+            colors: [
+              theme.primaryColor,
+              theme.primaryColor.withValues(alpha: 0.8),
+            ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -296,7 +299,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '\$${_stats['revenue']?.toStringAsFixed(2) ?? '0.00'}',
+                    'KES ${_stats['revenue']?.toStringAsFixed(2) ?? '0.00'}',
                     style: theme.textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.green.shade700,
@@ -325,12 +328,13 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         'color': Colors.orange,
         'route': CategoryManagementScreen.routeName,
       },
-      {
-        'title': 'Users',
-        'icon': Icons.people,
-        'color': Colors.green,
-        'route': UsersScreen.routeName,
-      },
+      // Users screen temporarily removed - implement as needed
+      // {
+      //   'title': 'Users',
+      //   'icon': Icons.people,
+      //   'color': Colors.green,
+      //   'route': '/users', // UsersScreen.routeName,
+      // },
       {
         'title': 'Orders',
         'icon': Icons.shopping_cart,
